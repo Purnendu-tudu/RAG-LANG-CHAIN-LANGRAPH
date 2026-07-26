@@ -3,7 +3,7 @@ import re
 import time
 import hashlib
 import logging
-from typing import List, TypedDict
+from typing import List, TypedDict, Optional
 from dotenv import load_dotenv
 
 from langchain_community.document_loaders import TextLoader
@@ -168,7 +168,7 @@ def get_llm(provider: str = None, temperature: float = 0.2):
     elif provider == "ollama":
         try:
             from langchain_ollama import ChatOllama
-            model_name = os.getenv("OLLAMA_MODEL", "llama3.2")
+            model_name = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
             base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
             num_gpu = int(os.getenv("OLLAMA_NUM_GPU", "0"))
             return ChatOllama(
