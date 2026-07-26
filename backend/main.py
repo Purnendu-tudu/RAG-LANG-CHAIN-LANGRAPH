@@ -45,9 +45,9 @@ app = FastAPI(
     title="LangChain & LangGraph RAG API",
     description=(
         "Enterprise RAG Backend — LangChain, LangGraph, FAISS, Google GenAI, Ollama. "
-        "Persistent document registry survives server restarts."
+        "Persistent document registry and disk uploads folder survive server restarts."
     ),
-    version="2.1.0",
+    version="2.2.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -112,12 +112,15 @@ class IndexedDocumentsResponse(BaseModel):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Persistence Paths
+# Persistence Paths & Upload Storage
 # ─────────────────────────────────────────────────────────────────────────────
 _BASE_DIR = os.path.dirname(__file__)
 _FAISS_DIR = os.path.join(_BASE_DIR, "faiss_index_store")
-# Registry file stores serialised chunk data for all indexed documents
+_UPLOADS_DIR = os.path.join(_BASE_DIR, "uploads")
 _REGISTRY_FILE = os.path.join(_FAISS_DIR, "document_registry.json")
+
+os.makedirs(_FAISS_DIR, exist_ok=True)
+os.makedirs(_UPLOADS_DIR, exist_ok=True)
 
 MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024   # 100 MB
 ALLOWED_EXTENSIONS = {".pdf"}
@@ -133,7 +136,7 @@ _indexed_documents: Dict[str, dict] = {}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Registry Persistence Helpers
+# Registry & Storage Persistence Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 def _save_registry() -> None:
     """Persist _indexed_documents (without LangChain Document objects) to JSON."""
@@ -197,7 +200,6 @@ def _rebuild_index_from_registry() -> None:
     if not all_chunks:
         _retriever = None
         _last_indexed_chunks = []
-        # Remove the stale FAISS files so the "no index" guard works correctly
         for fname in ("index.faiss", "index.pkl"):
             fpath = os.path.join(_FAISS_DIR, fname)
             if os.path.exists(fpath):
@@ -220,29 +222,52 @@ def _rebuild_index_from_registry() -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Startup — restore state from disk
+# Startup — restore state from disk & scan uploads folder
 # ─────────────────────────────────────────────────────────────────────────────
 @app.on_event("startup")
 def _on_startup() -> None:
     """Restore persisted document registry and FAISS index on server start."""
     global _retriever, _last_indexed_chunks
     app_logger.info("=== RAG API starting up — restoring persistent state ===")
+    os.makedirs(_UPLOADS_DIR, exist_ok=True)
 
     # 1. Load the document registry from disk
     _load_registry()
 
-    # 2. If registry has documents, rebuild the FAISS retriever in memory
+    # 2. Scan uploads directory for any PDFs that aren't indexed in registry yet
+    unindexed_pdfs = []
+    for f in os.listdir(_UPLOADS_DIR):
+        if f.lower().endswith(".pdf") and f not in _indexed_documents:
+            unindexed_pdfs.append(os.path.join(_UPLOADS_DIR, f))
+
+    if unindexed_pdfs:
+        app_logger.info("Found %d unindexed PDF(s) in uploads folder — indexing now...", len(unindexed_pdfs))
+        try:
+            _, doc_chunks = index_pdf_files_with_docling(unindexed_pdfs, chunk_size=400, chunk_overlap=50)
+            now = _now_iso()
+            for p in unindexed_pdfs:
+                fn = os.path.basename(p)
+                fchunks = [c for c in doc_chunks if c.metadata.get("document_name") == fn]
+                _indexed_documents[fn] = {
+                    "chunk_count": len(fchunks),
+                    "indexed_at": now,
+                    "chunks": fchunks,
+                }
+            _save_registry()
+        except Exception as e:
+            app_logger.error("Failed auto-indexing unindexed PDFs on startup: %s", e)
+
+    # 3. Rebuild the FAISS retriever in memory if documents exist
     if _indexed_documents:
         app_logger.info("Restoring FAISS index for %d documents...", len(_indexed_documents))
         _rebuild_index_from_registry()
     elif os.path.exists(os.path.join(_FAISS_DIR, "index.faiss")):
-        # FAISS exists but registry is empty → load it for backward compatibility
         try:
             from langchain_community.vectorstores import FAISS
             embeddings = get_embeddings()
             vectorstore = FAISS.load_local(_FAISS_DIR, embeddings, allow_dangerous_deserialization=True)
             _retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
-            app_logger.info("Loaded legacy FAISS index (no registry). Re-index to enable per-document management.")
+            app_logger.info("Loaded legacy FAISS index.")
         except Exception as e:
             app_logger.warning("Could not load legacy FAISS index: %s", e)
     else:
@@ -328,7 +353,7 @@ def _now_iso() -> str:
 def health_check():
     return {
         "status": "healthy",
-        "service": "LangGraph RAG API v2.1",
+        "service": "LangGraph RAG API v2.2",
         "indexed_documents": len(_indexed_documents),
         "total_chunks": sum(v["chunk_count"] for v in _indexed_documents.values()),
     }
@@ -361,8 +386,8 @@ def list_indexed_documents():
 @app.delete("/api/indexed-documents/{filename}", tags=["Document Management"])
 def delete_indexed_document(filename: str):
     """
-    Removes a specific document from the FAISS index, rebuilds the vector store,
-    and persists the updated registry to disk.
+    Removes a specific document from the FAISS index, removes the PDF file from backend/uploads/,
+    rebuilds the vector store, and persists the updated registry to disk.
     """
     global _indexed_documents
     if filename not in _indexed_documents:
@@ -373,6 +398,15 @@ def delete_indexed_document(filename: str):
 
     del _indexed_documents[filename]
 
+    # Delete physical PDF file from uploads directory if it exists
+    file_path = os.path.join(_UPLOADS_DIR, filename)
+    if os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+            app_logger.info("Physical file deleted from disk: %s", file_path)
+        except Exception as e:
+            app_logger.warning("Could not delete file %s: %s", file_path, e)
+
     # Rebuild FAISS from remaining docs + save updated registry to disk
     _rebuild_index_from_registry()
     _save_registry()
@@ -380,7 +414,7 @@ def delete_indexed_document(filename: str):
     app_logger.info("Deleted '%s' from index. %d documents remaining.", filename, len(_indexed_documents))
     return {
         "status": "success",
-        "message": f"'{filename}' has been permanently removed from the index.",
+        "message": f"'{filename}' has been permanently removed from the index and disk.",
         "remaining_documents": len(_indexed_documents),
     }
 
@@ -430,16 +464,16 @@ async def index_pdfs_endpoint(
     chunk_overlap: int = Form(50),
 ):
     """
-    Uploads multiple PDF files, validates them, parses via IBM Docling,
+    Uploads multiple PDF files, saves them into backend/uploads/, parses via IBM Docling,
     indexes content into FAISS, and persists the registry to disk.
-    Registry survives server restarts.
+    Index and files survive server restarts.
     """
     global _retriever, _indexed_documents
 
     if not files:
         raise HTTPException(status_code=400, detail="No files were uploaded.")
 
-    temp_dir = tempfile.mkdtemp()
+    os.makedirs(_UPLOADS_DIR, exist_ok=True)
     saved_pdf_paths = []
     skipped_duplicates = []
     rejected_files = []
@@ -450,7 +484,6 @@ async def index_pdfs_endpoint(
             filename = file.filename or "unknown"
             ext = os.path.splitext(filename)[1].lower()
 
-            # File type validation
             if ext not in ALLOWED_EXTENSIONS:
                 rejected_files.append(f"{filename} (unsupported file type — only .pdf allowed)")
                 continue
@@ -473,10 +506,11 @@ async def index_pdfs_endpoint(
                 warnings_list.append(f"'{filename}' is already indexed — skipping re-index.")
                 continue
 
-            temp_path = os.path.join(temp_dir, filename)
-            with open(temp_path, "wb") as buffer:
+            # Save permanently to backend/uploads/
+            upload_path = os.path.join(_UPLOADS_DIR, filename)
+            with open(upload_path, "wb") as buffer:
                 buffer.write(contents)
-            saved_pdf_paths.append(temp_path)
+            saved_pdf_paths.append(upload_path)
 
         if rejected_files and not saved_pdf_paths and not skipped_duplicates:
             raise HTTPException(
@@ -498,7 +532,7 @@ async def index_pdfs_endpoint(
                 preview_chunks=[],
             )
 
-        # Index new PDFs
+        # Index new PDFs via Docling
         new_retriever, doc_chunks = index_pdf_files_with_docling(
             pdf_paths=saved_pdf_paths,
             chunk_size=chunk_size,
@@ -526,14 +560,14 @@ async def index_pdfs_endpoint(
 
         status_msg = (
             f"Indexed {len(saved_pdf_paths)} PDF(s) — {', '.join(file_names)} — "
-            f"into {len(doc_chunks)} chunks. Registry saved to disk."
+            f"into {len(doc_chunks)} chunks. Saved permanently to backend/uploads/."
         )
         if warnings_list:
             status_msg += "\n\nWarnings:\n" + "\n".join(warnings_list)
         if rejected_files:
             status_msg += "\n\nRejected Files:\n" + "\n".join(f"• {r}" for r in rejected_files)
 
-        app_logger.info("PDF indexed: files=%s chunks=%d", file_names, len(doc_chunks))
+        app_logger.info("PDF indexed & saved to uploads: files=%s chunks=%d", file_names, len(doc_chunks))
 
         return IndexResponse(
             status="success",
@@ -549,8 +583,6 @@ async def index_pdfs_endpoint(
     except Exception as e:
         app_logger.error("PDF indexing error: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=f"PDF Indexing Error: {_safe_error(e)}")
-    finally:
-        shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 @app.post("/api/chat", response_model=ChatResponse, tags=["RAG Pipeline"])
@@ -670,7 +702,6 @@ if os.path.exists(_FRONTEND_DIST):
 
     @app.get("/{full_path:path}", include_in_schema=False)
     async def serve_spa(full_path: str):
-        # Serve exact file if it exists in dist, otherwise fallback to index.html for SPA routing
         target_file = os.path.join(_FRONTEND_DIST, full_path)
         if full_path and os.path.exists(target_file) and os.path.isfile(target_file):
             return FileResponse(target_file)
@@ -678,4 +709,3 @@ if os.path.exists(_FRONTEND_DIST):
         if os.path.exists(index_file):
             return FileResponse(index_file)
         raise HTTPException(status_code=404, detail="Frontend build not found.")
-

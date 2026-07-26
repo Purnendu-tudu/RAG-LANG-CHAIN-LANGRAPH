@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { ChatMessage as ChatMessageType, SourceDocument, LLMProvider, ChatApiResponse, QueryMode } from '../types';
 import { SourceDrawer } from '../components/SourceDrawer';
+import { SupportWidget } from '../components/SupportWidget';
 
 const API_BASE = 'http://localhost:8000';
 
@@ -301,6 +302,11 @@ export const GeVernovAIPage: React.FC = () => {
                       <span>{msg.sources.length} Source{msg.sources.length > 1 ? 's' : ''}</span>
                       <ChevronDown className="w-2.5 h-2.5" />
                     </button>
+                  )}
+
+                  {/* Interactive Support Widget when info is not found */}
+                  {!isUser && (msg.text.toLowerCase().includes('not found') || !msg.sources || msg.sources.length === 0) && msg.id !== 'gev-welcome-1' && (
+                    <SupportWidget />
                   )}
                 </div>
               </div>

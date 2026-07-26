@@ -94,6 +94,8 @@ SENSITIVE_DATA_GUARD = (
     "\"I can't provide internal system information or data outside the indexed document content.\"\n"
 )
 
+NOT_FOUND_RESPONSE = "The requested information was not found in the indexed documents."
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 4. Embeddings + Vector Store Persistence
@@ -279,7 +281,7 @@ def create_rag_graph(retriever, llm=None, provider: str = None, temperature: flo
             "Markdown Output Rules:\n"
             "1. Grounding: Answer STRICTLY using facts supported by the provided context documents.\n"
             "   If the context is empty or lacks sufficient information, respond EXACTLY with:\n"
-            "   \"The requested information was not found in the indexed documents.\"\n"
+            f"   \"{NOT_FOUND_RESPONSE}\"\n"
             "2. Rich Markdown: Use clean, structured Markdown (bold titles, bulleted lists, "
             "code blocks, tables if helpful).\n"
             "3. Tone: Objective, professional, articulate, and precise.\n\n"
@@ -310,7 +312,7 @@ def create_rag_graph(retriever, llm=None, provider: str = None, temperature: flo
             return {"generation": INJECTION_REFUSAL}
 
         if not documents:
-            context_str = "No relevant context found in the vector database."
+            return {"generation": NOT_FOUND_RESPONSE}
         else:
             context_str = "\n\n".join([
                 f"--- Context Block {i+1} ---\n{doc.page_content}"
@@ -493,7 +495,7 @@ def create_gevernovai_graph(retriever, llm=None, provider: str = None, temperatu
             "Markdown Output Rules:\n"
             "1. Grounding: Answer STRICTLY using facts supported by the provided context.\n"
             "   If the context is empty or lacks sufficient information, respond EXACTLY with:\n"
-            "   \"The requested information was not found in the indexed documents.\"\n"
+            f"   \"{NOT_FOUND_RESPONSE}\"\n"
             "2. Structure: Format your output using clean Gemini-style Markdown "
             "(bold section headings, structured bullet points, concise explanations).\n"
             "3. Tone: Direct, professional, articulate, and authoritative.\n\n"
@@ -524,7 +526,7 @@ def create_gevernovai_graph(retriever, llm=None, provider: str = None, temperatu
             return {"generation": INJECTION_REFUSAL}
 
         if not documents:
-            context_str = "No relevant context found in the vector database."
+            return {"generation": NOT_FOUND_RESPONSE}
         else:
             context_str = "\n\n".join([
                 f"--- Context Block {i+1} ---\n{doc.page_content}"

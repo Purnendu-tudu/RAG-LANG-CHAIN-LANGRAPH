@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { User, Bot, BookOpen } from 'lucide-react';
 import { ChatMessage as ChatMessageType, SourceDocument } from '../types';
+import { SupportWidget } from './SupportWidget';
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -11,6 +12,7 @@ interface ChatMessageProps {
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onSelectSources }) => {
   const isUser = message.sender === 'user';
+  const isNotFound = !isUser && (message.text.toLowerCase().includes('not found') || !message.sources || message.sources.length === 0) && message.id !== 'welcome-1';
 
   return (
     <motion.div
@@ -62,6 +64,9 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onSelectSourc
               )}
             </div>
           )}
+
+          {/* Support Widget */}
+          {isNotFound && <SupportWidget />}
         </div>
       </div>
     </motion.div>
