@@ -227,20 +227,34 @@ def get_query_mode_instructions(query_mode: str) -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 7. Table Extraction & Retrieval Helpers
+# 7. Enterprise Element Classifier & Table Natural Language Converter
 # ─────────────────────────────────────────────────────────────────────────────
-TABLE_QUERY_KEYWORDS = {
-    "table", "tables", "data", "columns", "column", "rows", "row", "compare", "comparison",
-    "matrix", "values", "value", "metrics", "metric", "statistics", "stats", "chart",
-    "numbers", "rate", "rates", "percentage", "percent", "amount", "amounts", "figures",
-    "figure", "tabulate", "summary table", "list of", "breakdown"
+ELEMENT_QUERY_KEYWORDS = {
+    "table": {
+        "table", "tables", "data", "columns", "column", "rows", "row", "compare", "comparison",
+        "matrix", "values", "value", "metrics", "metric", "statistics", "stats", "chart",
+        "numbers", "rate", "rates", "percentage", "percent", "amount", "amounts", "figures",
+        "figure", "tabulate", "summary table", "list of", "breakdown", "plan", "schedule",
+        "specification", "configurations", "params", "responsible", "who is"
+    },
+    "list": {
+        "steps", "step", "procedure", "procedures", "precautions", "safety", "rules", "checklist",
+        "guidelines", "instructions", "requirements", "prerequisites", "items"
+    },
+    "figure": {
+        "diagram", "figure", "drawing", "illustration", "flowchart", "schematic", "architecture",
+        "component", "components", "assembly"
+    }
 }
 
 
-def is_table_query(query: str) -> bool:
-    """Detects whether a user query is searching for tabular data or statistics."""
+def classify_query_type(query: str) -> Optional[str]:
+    """Classifies user query to identify target element type (table, list, figure)."""
     q_lower = query.lower()
-    return any(kw in q_lower for kw in TABLE_QUERY_KEYWORDS)
+    for elem_type, keywords in ELEMENT_QUERY_KEYWORDS.items():
+        if any(kw in q_lower for kw in keywords):
+            return elem_type
+    return None
 
 
 def extract_table_json(markdown_table_str: str) -> dict:
@@ -264,6 +278,41 @@ def extract_table_json(markdown_table_str: str) -> dict:
     }
 
 
+def table_to_natural_language(table_title: str, table_json: dict) -> str:
+    """Converts structured table JSON into embedding-friendly natural language text for optimal vector retrieval."""
+    headers = table_json.get("headers", [])
+    rows = table_json.get("rows", [])
+    if not headers or not rows:
+        return f"Table titled '{table_title}'."
+
+    sentences = [f"Table '{table_title}' contains columns {', '.join(headers)}. "]
+    for row in rows:
+        row_pairs = []
+        for i, val in enumerate(row):
+            if i < len(headers) and val.strip():
+                row_pairs.append(f"{headers[i]} is {val.strip()}")
+        if row_pairs:
+            sentences.append(f"Record: {', '.join(row_pairs)}.")
+
+    return " ".join(sentences)
+
+
+def classify_text_element_type(chunk_text: str) -> str:
+    """Classifies an independent text element into heading, list, figure, or paragraph."""
+    lines = [l.strip() for l in chunk_text.strip().splitlines() if l.strip()]
+    if not lines:
+        return "paragraph"
+
+    first_line = lines[0]
+    if first_line.startswith("#"):
+        return "heading"
+    if first_line.startswith("- ") or first_line.startswith("* ") or re.match(r'^\d+\.', first_line):
+        return "list"
+    if first_line.lower().startswith("figure ") or first_line.lower().startswith("diagram ") or "![" in first_line:
+        return "figure"
+    return "paragraph"
+
+
 def _dedup_documents(docs: List[Document]) -> List[Document]:
     """Remove duplicate chunks by content hash."""
     seen = set()
@@ -278,8 +327,8 @@ def _dedup_documents(docs: List[Document]) -> List[Document]:
 
 def filter_relevant_documents(retriever, query: str, max_l2_distance: float = 1.3) -> List[Document]:
     """
-    Performs similarity search with L2 distance score filtering, table prioritization, and deduplication.
-    Prioritizes first-class table chunks for table-related queries.
+    Performs similarity search with L2 distance score filtering, element-type prioritization, and deduplication.
+    Hybrid strategy: matches semantic similarity + prioritizes target element types (tables, lists, figures).
     """
     raw_docs = []
     try:
@@ -296,17 +345,20 @@ def filter_relevant_documents(retriever, query: str, max_l2_distance: float = 1.
             raw_docs = []
 
     unique_docs = _dedup_documents(raw_docs)
+    target_type = classify_query_type(query)
 
-    # Prioritize first-class table chunks if query is table/data related
-    if is_table_query(query) and unique_docs:
-        table_chunks = [
+    if target_type and unique_docs:
+        priority_chunks = [
             d for d in unique_docs
-            if d.metadata.get("chunk_type") == "table" or ("|" in d.page_content and "\n|---" in d.page_content)
+            if d.metadata.get("type") == target_type or d.metadata.get("chunk_type") == target_type
         ]
-        text_chunks = [d for d in unique_docs if d not in table_chunks]
-        if table_chunks:
-            logger.info("Table query detected ('%.50s') — prioritizing %d table chunk(s).", query, len(table_chunks))
-            return table_chunks + text_chunks
+        other_chunks = [d for d in unique_docs if d not in priority_chunks]
+        if priority_chunks:
+            logger.info(
+                "Query type '%s' detected for query ('%.50s') — prioritizing %d chunk(s).",
+                target_type, query, len(priority_chunks)
+            )
+            return priority_chunks + other_chunks
 
     return unique_docs
 
@@ -332,7 +384,8 @@ def create_rag_graph(retriever, llm=None, provider: str = None, temperature: flo
             f"   \"{NOT_FOUND_RESPONSE}\"\n"
             "2. Rich Markdown & Tables: Use clean Markdown. When presenting tabular data or comparisons, "
             "format the response using full Markdown tables (`| Header 1 | Header 2 |`).\n"
-            "3. Tone: Objective, professional, articulate, and precise.\n\n"
+            "3. Grounded Citation: Cite the Document Name, Page Number, Section, and Table Title (if applicable).\n"
+            "4. Tone: Objective, professional, articulate, and precise.\n\n"
             "Context:\n{context}"
         )),
         ("human", "Question: {question}")
@@ -342,8 +395,8 @@ def create_rag_graph(retriever, llm=None, provider: str = None, temperature: flo
         t0 = time.time()
         question = state["question"]
         docs = filter_relevant_documents(retriever, question)
-        elapsed_ms = int((time.time() - t0) * 1000)
-        doc_names = list({d.metadata.get("document_name", "unknown") for d in docs})
+        elapsed_ms = int((time.time() * 1000) - (t0 * 1000))
+        doc_names = list({d.metadata.get("document_name", d.metadata.get("document", "unknown")) for d in docs})
         logger.info(
             "RETRIEVE | query=%.80s | chunks=%d | docs=%s | elapsed=%dms",
             question, len(docs), doc_names, elapsed_ms
@@ -355,17 +408,16 @@ def create_rag_graph(retriever, llm=None, provider: str = None, temperature: flo
         question = state["question"]
         documents = state["documents"]
 
-        # Prompt injection guard
         if is_prompt_injection(question):
             return {"generation": INJECTION_REFUSAL}
 
         if not documents:
             return {"generation": NOT_FOUND_RESPONSE}
-        else:
-            context_str = "\n\n".join([
-                f"--- Context Block {i+1} ---\n{doc.page_content}"
-                for i, doc in enumerate(documents)
-            ])
+
+        context_str = "\n\n".join([
+            f"--- Context Block {i+1} [Type: {doc.metadata.get('type', 'text')}] ---\n{doc.page_content}"
+            for i, doc in enumerate(documents)
+        ])
 
         formatted_prompt = prompt_template.format(context=context_str, question=question)
 
@@ -373,34 +425,15 @@ def create_rag_graph(retriever, llm=None, provider: str = None, temperature: flo
         try:
             response = llm.invoke(formatted_prompt)
         except Exception as err:
-            err_msg = str(err)
-            logger.error("LLM invocation failed: %.200s", err_msg)
+            logger.error("LLM invocation failed: %.200s", err)
             fallback_llm = get_llm("mock")
-            try:
-                response = fallback_llm.invoke(formatted_prompt)
-                prefix = f"⚠️ *LLM unavailable. Generated via fallback.*\n\n"
-            except Exception:
-                class ErrorResponse:
-                    content = "⚠️ The AI model is currently unavailable. Please try again shortly."
-                response = ErrorResponse()
+            response = fallback_llm.invoke(formatted_prompt)
+            prefix = f"⚠️ *LLM unavailable. Generated via fallback.*\n\n"
 
         raw_content = getattr(response, "content", response)
-        if isinstance(raw_content, list):
-            text_parts = []
-            for item in raw_content:
-                if isinstance(item, str):
-                    text_parts.append(item)
-                elif isinstance(item, dict) and "text" in item:
-                    text_parts.append(item["text"])
-                elif hasattr(item, "text"):
-                    text_parts.append(getattr(item, "text"))
-                else:
-                    text_parts.append(str(item))
-            content = "".join(text_parts)
-        else:
-            content = str(raw_content)
+        content = str(raw_content)
 
-        elapsed_ms = int((time.time() - t0) * 1000)
+        elapsed_ms = int((time.time() * 1000) - (t0 * 1000))
         logger.info("GENERATE | query=%.80s | elapsed=%dms", question, elapsed_ms)
 
         return {"generation": prefix + content}
@@ -416,7 +449,7 @@ def create_rag_graph(retriever, llm=None, provider: str = None, temperature: flo
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 9. Enterprise Document Indexer with First-Class Table Chunks
+# 9. Enterprise Document Indexer with Docling Object Model Chunking
 # ─────────────────────────────────────────────────────────────────────────────
 def create_enterprise_chunks(
     raw_markdown_text: str,
@@ -425,35 +458,42 @@ def create_enterprise_chunks(
     chunk_overlap: int = 200
 ) -> List[Document]:
     """
-    Enterprise Document Indexer with First-Class Table Preservation:
-    - Extracts tables into dedicated table chunks (chunk_type="table").
-    - Stores tables with Markdown table formatting AND structured JSON metadata.
-    - Keeps paragraphs, headings, lists, and tables as separate semantic chunks.
-    - Attaches rich metadata: document_name, page_number, section_heading, table_title, table_id, table_json.
+    Enterprise Docling Document Indexer:
+    - Treats every logical element (heading, paragraph, table, list, figure) as an independent semantic object.
+    - Dual table representation:
+        1. Markdown layout format (content_markdown for prompt & display).
+        2. Natural Language Text (content_text for optimal embedding search).
+    - Stores structured JSON schema (headers, rows, num_rows, num_cols) in chunk metadata.
+    - Attaches comprehensive enterprise metadata: document, chunk_id, page, section, subsection, type, table_title, columns, keywords, language, version.
     """
     cleaned_text = re.sub(r'Page \d+ of \d+', '', raw_markdown_text, flags=re.IGNORECASE)
     cleaned_text = re.sub(r'\n{3,}', '\n\n', cleaned_text)
 
-    tables_found = []
+    tables_found: List[Document] = []
+    table_index = 1
+    chunk_index = 1
+
+    # 1. Extract First-Class Table Chunks (Dual Representation + JSON Schema)
     table_pattern = re.compile(r'(\|[^\n]+\|\n\|[-:\s|]+\|\n(?:\|[^\n]+\|\n?)+)', re.MULTILINE)
 
-    table_index = 1
     for match in table_pattern.finditer(cleaned_text):
-        table_str = match.group(1).strip()
+        table_markdown = match.group(1).strip()
         start_pos = match.start()
 
-        # Extract preceding section heading & table title
         preceding = cleaned_text[:start_pos].strip().splitlines()
         table_title = "Data Table"
         section_heading = "General"
+        subsection = "Overview"
 
         if preceding:
             for line in reversed(preceding):
                 line_str = line.strip()
-                if line_str.startswith("#"):
+                if line_str.startswith("###"):
+                    subsection = line_str.lstrip("#").strip()
+                elif line_str.startswith("#"):
                     section_heading = line_str.lstrip("#").strip()
                     break
-                elif line_str and not line_str.startswith("|") and len(line_str) < 100:
+                elif line_str and not line_str.startswith("|") and len(line_str) < 100 and table_title == "Data Table":
                     table_title = line_str
                     break
 
