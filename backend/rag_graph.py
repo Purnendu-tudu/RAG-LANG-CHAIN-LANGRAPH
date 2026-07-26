@@ -227,8 +227,43 @@ def get_query_mode_instructions(query_mode: str) -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 7. Retrieval Helpers
+# 7. Table Extraction & Retrieval Helpers
 # ─────────────────────────────────────────────────────────────────────────────
+TABLE_QUERY_KEYWORDS = {
+    "table", "tables", "data", "columns", "column", "rows", "row", "compare", "comparison",
+    "matrix", "values", "value", "metrics", "metric", "statistics", "stats", "chart",
+    "numbers", "rate", "rates", "percentage", "percent", "amount", "amounts", "figures",
+    "figure", "tabulate", "summary table", "list of", "breakdown"
+}
+
+
+def is_table_query(query: str) -> bool:
+    """Detects whether a user query is searching for tabular data or statistics."""
+    q_lower = query.lower()
+    return any(kw in q_lower for kw in TABLE_QUERY_KEYWORDS)
+
+
+def extract_table_json(markdown_table_str: str) -> dict:
+    """Parses a Markdown table string into a structured JSON dict with headers and rows."""
+    lines = [line.strip() for line in markdown_table_str.strip().splitlines() if line.strip()]
+    if len(lines) < 2:
+        return {}
+
+    headers = [cell.strip() for cell in lines[0].strip('|').split('|')]
+    rows = []
+    for line in lines[2:]:
+        if '|' in line:
+            row_cells = [cell.strip() for cell in line.strip('|').split('|')]
+            rows.append(row_cells)
+
+    return {
+        "headers": headers,
+        "rows": rows,
+        "num_rows": len(rows),
+        "num_cols": len(headers),
+    }
+
+
 def _dedup_documents(docs: List[Document]) -> List[Document]:
     """Remove duplicate chunks by content hash."""
     seen = set()
@@ -243,24 +278,37 @@ def _dedup_documents(docs: List[Document]) -> List[Document]:
 
 def filter_relevant_documents(retriever, query: str, max_l2_distance: float = 1.3) -> List[Document]:
     """
-    Performs similarity search with L2 distance score filtering and deduplication.
-    Filters out weak/loose single-word matches with high L2 distance scores.
+    Performs similarity search with L2 distance score filtering, table prioritization, and deduplication.
+    Prioritizes first-class table chunks for table-related queries.
     """
+    raw_docs = []
     try:
         if hasattr(retriever, "vectorstore"):
-            docs_and_scores = retriever.vectorstore.similarity_search_with_score(query, k=4)
-            relevant_docs = [doc for doc, score in docs_and_scores if score <= max_l2_distance]
-            if relevant_docs:
-                return _dedup_documents(relevant_docs)
-            logger.info(
-                "All retrieved chunks exceeded L2 distance threshold (%.2f). Returning empty context.",
-                max_l2_distance
-            )
-            return []
+            docs_and_scores = retriever.vectorstore.similarity_search_with_score(query, k=6)
+            raw_docs = [doc for doc, score in docs_and_scores if score <= max_l2_distance]
+        else:
+            raw_docs = retriever.invoke(query)
     except Exception as e:
         logger.info("Score filtering fallback: %s", e)
+        try:
+            raw_docs = retriever.invoke(query)
+        except Exception:
+            raw_docs = []
 
-    return _dedup_documents(retriever.invoke(query))
+    unique_docs = _dedup_documents(raw_docs)
+
+    # Prioritize first-class table chunks if query is table/data related
+    if is_table_query(query) and unique_docs:
+        table_chunks = [
+            d for d in unique_docs
+            if d.metadata.get("chunk_type") == "table" or ("|" in d.page_content and "\n|---" in d.page_content)
+        ]
+        text_chunks = [d for d in unique_docs if d not in table_chunks]
+        if table_chunks:
+            logger.info("Table query detected ('%.50s') — prioritizing %d table chunk(s).", query, len(table_chunks))
+            return table_chunks + text_chunks
+
+    return unique_docs
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -282,8 +330,8 @@ def create_rag_graph(retriever, llm=None, provider: str = None, temperature: flo
             "1. Grounding: Answer STRICTLY using facts supported by the provided context documents.\n"
             "   If the context is empty or lacks sufficient information, respond EXACTLY with:\n"
             f"   \"{NOT_FOUND_RESPONSE}\"\n"
-            "2. Rich Markdown: Use clean, structured Markdown (bold titles, bulleted lists, "
-            "code blocks, tables if helpful).\n"
+            "2. Rich Markdown & Tables: Use clean Markdown. When presenting tabular data or comparisons, "
+            "format the response using full Markdown tables (`| Header 1 | Header 2 |`).\n"
             "3. Tone: Objective, professional, articulate, and precise.\n\n"
             "Context:\n{context}"
         )),
@@ -352,13 +400,10 @@ def create_rag_graph(retriever, llm=None, provider: str = None, temperature: flo
         else:
             content = str(raw_content)
 
-        if prefix:
-            content = prefix + content
-
         elapsed_ms = int((time.time() - t0) * 1000)
         logger.info("GENERATE | query=%.80s | elapsed=%dms", question, elapsed_ms)
 
-        return {"generation": content}
+        return {"generation": prefix + content}
 
     workflow = StateGraph(RAGState)
     workflow.add_node("retrieve", retrieve_node)
@@ -371,23 +416,66 @@ def create_rag_graph(retriever, llm=None, provider: str = None, temperature: flo
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 9. Enterprise Document Chunker
+# 9. Enterprise Document Indexer with First-Class Table Chunks
 # ─────────────────────────────────────────────────────────────────────────────
 def create_enterprise_chunks(
     raw_markdown_text: str,
-    doc_name: str,
-    target_chunk_size: int = 1500,
+    doc_name: str = "document.pdf",
+    target_chunk_size: int = 1200,
     chunk_overlap: int = 200
 ) -> List[Document]:
     """
-    Enterprise Document Indexer:
-    - Splits content by headings (#, ##, ###), sections, tables, and lists.
-    - Preserves tables (| col1 | col2 |) and code blocks intact.
-    - Strips headers, footers, page numbers, and duplicate blank lines.
-    - Attaches rich metadata: document_name, page_number, section_heading, subsection, table_title, chunk_id.
+    Enterprise Document Indexer with First-Class Table Preservation:
+    - Extracts tables into dedicated table chunks (chunk_type="table").
+    - Stores tables with Markdown table formatting AND structured JSON metadata.
+    - Keeps paragraphs, headings, lists, and tables as separate semantic chunks.
+    - Attaches rich metadata: document_name, page_number, section_heading, table_title, table_id, table_json.
     """
     cleaned_text = re.sub(r'Page \d+ of \d+', '', raw_markdown_text, flags=re.IGNORECASE)
     cleaned_text = re.sub(r'\n{3,}', '\n\n', cleaned_text)
+
+    tables_found = []
+    table_pattern = re.compile(r'(\|[^\n]+\|\n\|[-:\s|]+\|\n(?:\|[^\n]+\|\n?)+)', re.MULTILINE)
+
+    table_index = 1
+    for match in table_pattern.finditer(cleaned_text):
+        table_str = match.group(1).strip()
+        start_pos = match.start()
+
+        # Extract preceding section heading & table title
+        preceding = cleaned_text[:start_pos].strip().splitlines()
+        table_title = "Data Table"
+        section_heading = "General"
+
+        if preceding:
+            for line in reversed(preceding):
+                line_str = line.strip()
+                if line_str.startswith("#"):
+                    section_heading = line_str.lstrip("#").strip()
+                    break
+                elif line_str and not line_str.startswith("|") and len(line_str) < 100:
+                    table_title = line_str
+                    break
+
+        table_json = extract_table_json(table_str)
+
+        table_doc = Document(
+            page_content=f"### Table: {table_title}\n\n{table_str}",
+            metadata={
+                "chunk_id": f"{doc_name}_tbl_{table_index}",
+                "document_name": doc_name,
+                "section_heading": section_heading,
+                "table_title": table_title,
+                "table_id": f"tbl_{table_index}",
+                "table_json": json.dumps(table_json),
+                "chunk_type": "table",
+            }
+        )
+        tables_found.append(table_doc)
+        table_index += 1
+
+    # Remove tables from text to keep text chunks semantically separate
+    clean_non_table_text = table_pattern.sub("\n\n[TABLE_EXTRACTED]\n\n", cleaned_text)
 
     headers_to_split_on = [
         ("#", "section_heading"),
@@ -395,42 +483,30 @@ def create_enterprise_chunks(
         ("###", "sub_subsection")
     ]
 
-    header_docs = []
     try:
         header_splitter = MarkdownHeaderTextSplitter(
             headers_to_split_on=headers_to_split_on,
             strip_headers=False
         )
-        header_docs = header_splitter.split_text(cleaned_text)
+        header_docs = header_splitter.split_text(clean_non_table_text)
     except Exception as e:
         logger.info("Markdown header splitting fallback: %s", e)
-        header_docs = [Document(page_content=cleaned_text, metadata={})]
+        header_docs = [Document(page_content=clean_non_table_text, metadata={})]
 
     final_documents = []
     chunk_index = 1
-
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=target_chunk_size,
         chunk_overlap=chunk_overlap,
-        separators=["\n```", "\n\n", "\n|", "\n", " "]
+        separators=["\n```", "\n\n", "\n", " "]
     )
 
     for doc in header_docs:
-        content = doc.page_content.strip()
+        content = doc.page_content.replace("[TABLE_EXTRACTED]", "").strip()
+        if not content:
+            continue
+
         metadata = dict(doc.metadata)
-
-        table_title = ""
-        if "|" in content and "\n|---" in content:
-            lines = content.splitlines()
-            for idx, line in enumerate(lines):
-                if "|" in line and idx > 0:
-                    prev_line = lines[idx - 1].strip()
-                    if prev_line and not prev_line.startswith("|"):
-                        table_title = prev_line
-                        break
-            if not table_title:
-                table_title = "Data Table"
-
         sub_chunks = text_splitter.split_text(content)
         for chunk in sub_chunks:
             chunk_metadata = {
@@ -438,16 +514,14 @@ def create_enterprise_chunks(
                 "document_name": doc_name,
                 "section_heading": metadata.get("section_heading", "General"),
                 "subsection": metadata.get("subsection", "Overview"),
-                "table_title": table_title,
-                "page_number": metadata.get("page_number", 1)
+                "chunk_type": "text",
             }
             clean_metadata = {k: v for k, v in chunk_metadata.items() if v}
-
-            langchain_doc = Document(page_content=chunk.strip(), metadata=clean_metadata)
-            final_documents.append(langchain_doc)
+            final_documents.append(Document(page_content=chunk.strip(), metadata=clean_metadata))
             chunk_index += 1
 
-    return final_documents
+    all_chunks = tables_found + final_documents
+    return all_chunks if all_chunks else [Document(page_content=cleaned_text, metadata={"chunk_type": "text", "document_name": doc_name})]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
