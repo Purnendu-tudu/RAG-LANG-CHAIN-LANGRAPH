@@ -1,0 +1,25 @@
+# Comprehensive Guide to LangChain, LangGraph, and RAG Architecture
+
+## What is LangChain?
+LangChain is an open-source framework designed to simplify the creation of applications using Large Language Models (LLMs). It provides a standard interface for chains, integrations with hundreds of tools, and end-to-end applications for common use cases such as prompt management, vector index retrieval, and external tools interaction.
+
+## What is Retrieval-Augmented Generation (RAG)?
+Retrieval-Augmented Generation (RAG) is a technique used to optimize the output of a Large Language Model by referencing an authoritative knowledge base outside its training data sources before generating a response. 
+RAG consists of three main stages:
+1. Ingestion: Documents are loaded, split into smaller chunks (text splitting), and converted into mathematical representations (embeddings) which are saved into a vector store (e.g., FAISS, ChromaDB).
+2. Retrieval: When a user asks a question, the question is converted into an embedding to retrieve the most semantically relevant document chunks from the vector store.
+3. Generation: The retrieved document chunks are passed alongside the user question to an LLM within a prompt to synthesize a grounded, accurate answer.
+
+## What is LangGraph?
+LangGraph is a library built on top of LangChain for building stateful, multi-actor applications with LLMs. Unlike linear chains, LangGraph allows users to build cyclic state machines and graph structures.
+Key concepts in LangGraph include:
+- State: A shared data structure (often defined using Python's TypedDict) that represents the current snapshot of the application state passed between nodes.
+- Nodes: Python functions or runnables that accept the current State as input, perform work (such as tool execution or LLM calls), and return an updated state.
+- Edges: Connections between nodes that control execution flow. Edges can be direct (always go to next node) or conditional (determine next node based on current state).
+- START & END: Special entry and exit points for the graph workflow.
+
+## Why use LangGraph for RAG?
+Using LangGraph for RAG offers major benefits:
+- Fine-grained control: You can introduce decision nodes, such as grading the relevance of retrieved documents or deciding whether to re-query, query transform, or rewrite answer outputs.
+- Persistence and Memory: State can be saved across turns for chat history and interactive multi-turn conversations.
+- Graph Visualization: RAG graph workflows can be easily rendered into visual diagrams for auditing and debugging.
