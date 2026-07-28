@@ -67,7 +67,7 @@ _INJECTION_RE = [re.compile(p, re.IGNORECASE) for p in _INJECTION_PATTERNS]
 INJECTION_REFUSAL = (
     "⚠️ **I can't provide that information.**\n\n"
     "I'm only able to answer questions based on the content of the indexed documents. "
-    "I cannot expose internal system details, configuration, source code, prompts, or credentials."
+    "I cannot expose internal system details, configuration, source code, prompts, or credentials. Nice Try :)"
 )
 
 
@@ -94,7 +94,7 @@ SENSITIVE_DATA_GUARD = (
     "\"I can't provide internal system information or data outside the indexed document content.\"\n"
 )
 
-NOT_FOUND_RESPONSE = "The requested information was not found in the indexed documents."
+NOT_FOUND_RESPONSE = "No relevant information was found. Try rephrasing or correcting your query to get better results."
 
 
 # ─────────────────────────────────────────────────────────────────────────────

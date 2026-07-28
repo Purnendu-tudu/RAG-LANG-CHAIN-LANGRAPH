@@ -44,29 +44,29 @@ export const SupportWidget: React.FC = () => {
               <Mail className="w-4 h-4 text-sky-400 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="font-semibold text-white">Email Support</p>
-                <p className="text-sky-300 font-mono text-[10px]">support@gevernova.com</p>
+                <p className="text-sky-300 font-mono text-[10px]">support@xyz.com</p>
               </div>
             </div>
             <div className="p-2.5 rounded-lg bg-slate-950 border border-sky-500/20 flex items-start space-x-2">
               <Phone className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="font-semibold text-white">Help Desk</p>
-                <p className="text-emerald-300 font-mono text-[10px]">+1 (800) 555-VERN</p>
+                <p className="text-emerald-300 font-mono text-[10px]">+1 (2345) 555-VERN</p>
               </div>
             </div>
             <div className="p-2.5 rounded-lg bg-slate-950 border border-sky-500/20 flex items-start space-x-2">
               <Wrench className="w-4 h-4 text-violet-400 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="font-semibold text-white">Tech Support</p>
-                <p className="text-violet-300 font-mono text-[10px]">tech-support@gevernova.com</p>
+                <p className="text-violet-300 font-mono text-[10px]">tech-support@xyz.com</p>
               </div>
             </div>
             <div className="p-2.5 rounded-lg bg-slate-950 border border-sky-500/20 flex items-start space-x-2">
               <Globe className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="font-semibold text-white">Help Portal</p>
-                <a href="https://www.gevernova.com/support" target="_blank" rel="noreferrer" className="text-cyan-300 underline text-[10px]">
-                  gevernova.com/support
+                <a href="#" target="_blank" rel="noreferrer" className="text-cyan-300 underline text-[10px]">
+                  xyz.com/support
                 </a>
               </div>
             </div>
