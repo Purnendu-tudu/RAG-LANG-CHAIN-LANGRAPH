@@ -193,6 +193,49 @@ def get_llm(provider: str = None, temperature: float = 0.2):
     return MockLLM()
 
 
+def extract_text_from_llm_response(raw) -> str:
+    """
+    Robust helper to extract clean plain text from LLM response objects,
+    lists of content blocks, or dict structures, preventing stringified Python objects.
+    """
+    if hasattr(raw, "content"):
+        raw = raw.content
+
+    if isinstance(raw, str):
+        trimmed = raw.strip()
+        if (trimmed.startswith("[{") or trimmed.startswith("{")) and ("'type': 'text'" in trimmed or '"type": "text"' in trimmed):
+            try:
+                import ast
+                parsed = ast.literal_eval(trimmed)
+                return extract_text_from_llm_response(parsed)
+            except Exception:
+                pass
+        return raw
+
+    if isinstance(raw, list):
+        parts = []
+        for item in raw:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict):
+                if "text" in item and isinstance(item["text"], str):
+                    parts.append(item["text"])
+                else:
+                    parts.append(str(item))
+            elif hasattr(item, "text"):
+                parts.append(str(getattr(item, "text")))
+            else:
+                parts.append(str(item))
+        return "".join(parts)
+
+    if isinstance(raw, dict):
+        if "text" in raw and isinstance(raw["text"], str):
+            return raw["text"]
+        return str(raw)
+
+    return str(raw)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 6. Query Mode Instructions
 # ─────────────────────────────────────────────────────────────────────────────
@@ -385,7 +428,10 @@ def create_rag_graph(retriever, llm=None, provider: str = None, temperature: flo
             "2. Rich Markdown & Tables: Use clean Markdown. When presenting tabular data or comparisons, "
             "format the response using full Markdown tables (`| Header 1 | Header 2 |`).\n"
             "3. Grounded Citation: Cite the Document Name, Page Number, Section, and Table Title (if applicable).\n"
-            "4. Tone: Objective, professional, articulate, and precise.\n\n"
+            "4. Diagrams & Flowcharts: When asked for architecture, workflows, process flows, or sequence steps, "
+            "generate valid Mermaid diagrams STRICTLY enclosed in markdown code fences. "
+            "Always wrap node text labels in double quotes (e.g. A[\"Read Manual Carefully\"] --> B[\"Site Selection & Siting\"]).\n"
+            "5. Tone: Objective, professional, articulate, and precise.\n\n"
             "Context:\n{context}"
         )),
         ("human", "Question: {question}")
@@ -430,8 +476,7 @@ def create_rag_graph(retriever, llm=None, provider: str = None, temperature: flo
             response = fallback_llm.invoke(formatted_prompt)
             prefix = f"⚠️ *LLM unavailable. Generated via fallback.*\n\n"
 
-        raw_content = getattr(response, "content", response)
-        content = str(raw_content)
+        content = extract_text_from_llm_response(response)
 
         elapsed_ms = int((time.time() * 1000) - (t0 * 1000))
         logger.info("GENERATE | query=%.80s | elapsed=%dms", question, elapsed_ms)
@@ -612,7 +657,10 @@ def create_gevernovai_graph(retriever, llm=None, provider: str = None, temperatu
             f"   \"{NOT_FOUND_RESPONSE}\"\n"
             "2. Structure: Format your output using clean Gemini-style Markdown "
             "(bold section headings, structured bullet points, concise explanations).\n"
-            "3. Tone: Direct, professional, articulate, and authoritative.\n\n"
+            "3. Diagrams & Flowcharts: When asked for architecture, workflows, process flows, or sequence steps, "
+            "generate valid Mermaid diagrams STRICTLY enclosed in markdown code fences. "
+            "Always wrap node text labels in double quotes (e.g. A[\"Read Manual Carefully\"] --> B[\"Site Selection & Siting\"]).\n"
+            "4. Tone: Direct, professional, articulate, and authoritative.\n\n"
             "Context:\n{context}"
         )),
         ("human", "Question: {question}")
@@ -656,14 +704,7 @@ def create_gevernovai_graph(retriever, llm=None, provider: str = None, temperatu
             fallback = get_llm("mock")
             response = fallback.invoke(formatted_prompt)
 
-        raw_content = getattr(response, "content", response)
-        if isinstance(raw_content, list):
-            content = "".join([
-                str(item.get("text", item) if isinstance(item, dict) else item)
-                for item in raw_content
-            ])
-        else:
-            content = str(raw_content)
+        content = extract_text_from_llm_response(response)
 
         elapsed_ms = int((time.time() - t0) * 1000)
         logger.info("GEV GENERATE | query=%.80s | elapsed=%dms", question, elapsed_ms)

@@ -8,9 +8,10 @@ import {
   FileText, ListChecks, Search, StopCircle, AlertTriangle, FolderOpen,
   FileWarning, ChevronDown, Brain,
 } from 'lucide-react';
-import { ChatMessage as ChatMessageType, SourceDocument, LLMProvider, ChatApiResponse, QueryMode } from '../types';
+import { ChatMessage as ChatMessageType, SourceDocument, LLMProvider, ChatApiResponse, QueryMode, preprocessMarkdownText } from '../types';
 import { SourceDrawer } from '../components/SourceDrawer';
 import { SupportWidget } from '../components/SupportWidget';
+import { MermaidDiagram } from '../components/MermaidDiagram';
 
 const API_BASE = 'http://localhost:8000';
 
@@ -278,7 +279,28 @@ export const GeVernovAIPage: React.FC = () => {
                       <p className="whitespace-pre-wrap break-words">{msg.text}</p>
                     ) : (
                       <div className="prose prose-invert prose-sm max-w-none prose-p:my-1 prose-p:leading-relaxed prose-pre:bg-slate-950 prose-pre:border prose-pre:border-sky-500/20 prose-pre:text-xs prose-table:text-xs overflow-x-auto">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            code({ node, inline, className, children, ...props }: any) {
+                              const match = /language-(\w+)/.exec(className || '');
+                              const language = match ? match[1] : '';
+                              const content = String(children).replace(/\n$/, '');
+
+                              if (!inline && language === 'mermaid') {
+                                return <MermaidDiagram chart={content} />;
+                              }
+
+                              return (
+                                <code className={className} {...props}>
+                                  {children}
+                                </code>
+                              );
+                            },
+                          }}
+                        >
+                          {preprocessMarkdownText(msg.text)}
+                        </ReactMarkdown>
                       </div>
                     )}
                   </div>

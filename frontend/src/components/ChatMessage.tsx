@@ -2,8 +2,9 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { User, Bot, BookOpen } from 'lucide-react';
-import { ChatMessage as ChatMessageType, SourceDocument } from '../types';
+import { ChatMessage as ChatMessageType, SourceDocument, preprocessMarkdownText } from '../types';
 import { SupportWidget } from './SupportWidget';
+import { MermaidDiagram } from './MermaidDiagram';
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -42,7 +43,27 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onSelectSourc
               <p className="whitespace-pre-wrap break-words">{message.text}</p>
             ) : (
               <div className="prose prose-invert prose-sm max-w-none prose-p:my-1 prose-p:leading-relaxed prose-pre:bg-slate-900 prose-pre:border prose-pre:border-slate-800 prose-pre:text-xs overflow-x-auto">
-                <ReactMarkdown>{message.text}</ReactMarkdown>
+                <ReactMarkdown
+                  components={{
+                    code({ node, inline, className, children, ...props }: any) {
+                      const match = /language-(\w+)/.exec(className || '');
+                      const language = match ? match[1] : '';
+                      const content = String(children).replace(/\n$/, '');
+
+                      if (!inline && language === 'mermaid') {
+                        return <MermaidDiagram chart={content} />;
+                      }
+
+                      return (
+                        <code className={className} {...props}>
+                          {children}
+                        </code>
+                      );
+                    },
+                  }}
+                >
+                  {preprocessMarkdownText(message.text)}
+                </ReactMarkdown>
               </div>
             )}
           </div>

@@ -21,6 +21,7 @@ from rag_graph import (
     index_pdf_files_with_docling,
     get_embeddings,
     save_vectorstore,
+    extract_text_from_llm_response,
     logger as rag_logger,
 )
 
@@ -608,11 +609,7 @@ def chat_endpoint(request: ChatRequest):
             for idx, doc in enumerate(retrieved_docs)
         ]
         raw_answer = result.get("generation", "")
-        answer_str = (
-            "".join([str(item) for item in raw_answer])
-            if isinstance(raw_answer, list)
-            else str(raw_answer)
-        )
+        answer_str = extract_text_from_llm_response(raw_answer)
 
         elapsed_ms = int((time.time() - t0) * 1000)
         rag_logger.info(
@@ -659,11 +656,7 @@ def gevernovai_chat_endpoint(request: ChatRequest):
             for idx, doc in enumerate(retrieved_docs)
         ]
         raw_answer = result.get("generation", "")
-        answer_str = (
-            "".join([str(item) for item in raw_answer])
-            if isinstance(raw_answer, list)
-            else str(raw_answer)
-        )
+        answer_str = extract_text_from_llm_response(raw_answer)
 
         elapsed_ms = int((time.time() - t0) * 1000)
         rag_logger.info(
