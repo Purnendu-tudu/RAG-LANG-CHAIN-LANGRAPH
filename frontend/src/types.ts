@@ -4,7 +4,7 @@ export interface SourceDocument {
   metadata?: Record<string, any>;
 }
 
-export type QueryMode = 'qa' | 'summary' | 'key_takeaways' | 'deep_dive';
+export type QueryMode = 'qa' | 'summary' | 'key_takeaways' | 'deep_dive' | 'architecture';
 
 export interface ChatMessage {
   id: string;
@@ -25,6 +25,8 @@ export interface ChatApiResponse {
 }
 
 export type LLMProvider = 'google' | 'ollama';
+
+export type ActiveTab = 'rag' | 'document' | 'gevernovai' | 'presentation' | 'livepresentation';
 
 export function preprocessMarkdownText(text: string): string {
   if (!text) return '';

@@ -4,10 +4,11 @@ import { Header } from './components/Header';
 import { ChatMessage } from './components/ChatMessage';
 import { InputBar } from './components/InputBar';
 import { SourceDrawer } from './components/SourceDrawer';
-import { ActiveTab } from './components/Navigation';
 import { DocumentIndexingPage } from './pages/DocumentIndexingPage';
 import { GeVernovAIPage } from './pages/GeVernovAIPage';
-import { ChatMessage as ChatMessageType, SourceDocument, LLMProvider, ChatApiResponse } from './types';
+import { PresentationPage } from './pages/PresentationPage';
+import { LivePresentationPage } from './pages/LivePresentationPage';
+import { ActiveTab, ChatMessage as ChatMessageType, SourceDocument, LLMProvider, ChatApiResponse } from './types';
 import { Sparkles, Bot } from 'lucide-react';
 
 const queryClient = new QueryClient();
@@ -40,13 +41,17 @@ function MainApp() {
   const [provider, setProvider] = useState<LLMProvider>('google');
   const [activeTab, setActiveTab] = useState<ActiveTab>('rag');
 
-  // Sync tab state with window location path (/document, /gevernovai)
+  // Sync tab state with window location path (/document, /gevernovai, /livepresentation, /presentation)
   useEffect(() => {
     const path = window.location.pathname.toLowerCase();
     if (path.includes('/document')) {
       setActiveTab('document');
     } else if (path.includes('/gevernovai')) {
       setActiveTab('gevernovai');
+    } else if (path.includes('/livepresentation') || path.includes('/live-presentation')) {
+      setActiveTab('livepresentation');
+    } else if (path.includes('/presentation')) {
+      setActiveTab('presentation');
     } else {
       setActiveTab('rag');
     }
@@ -58,6 +63,10 @@ function MainApp() {
       window.history.pushState({}, '', '/document');
     } else if (tab === 'gevernovai') {
       window.history.pushState({}, '', '/gevernovai');
+    } else if (tab === 'livepresentation') {
+      window.history.pushState({}, '', '/livepresentation');
+    } else if (tab === 'presentation') {
+      window.history.pushState({}, '', '/presentation');
     } else {
       window.history.pushState({}, '', '/');
     }
@@ -140,8 +149,8 @@ function MainApp() {
 
   return (
     <div className="min-h-screen h-screen flex flex-col bg-[#090d16] text-slate-100 overflow-hidden">
-      {/* Render Global Header for RAG and Document pages only */}
-      {activeTab !== 'gevernovai' && (
+      {/* Render Global Header for RAG, Document, Presentation pages only */}
+      {activeTab !== 'gevernovai' && activeTab !== 'livepresentation' && (
         <Header
           provider={provider}
           onProviderChange={setProvider}
@@ -156,6 +165,14 @@ function MainApp() {
 
       {activeTab === 'gevernovai' && (
         <GeVernovAIPage />
+      )}
+
+      {activeTab === 'livepresentation' && (
+        <LivePresentationPage />
+      )}
+
+      {activeTab === 'presentation' && (
+        <PresentationPage />
       )}
 
       {activeTab === 'rag' && (

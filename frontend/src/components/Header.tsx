@@ -1,7 +1,7 @@
 import React from 'react';
 import { Sparkles, Cpu, Layers, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
-import { LLMProvider } from '../types';
-import { Navigation, ActiveTab } from './Navigation';
+import { LLMProvider, ActiveTab } from '../types';
+import { Navigation } from './Navigation';
 
 interface HeaderProps {
   provider: LLMProvider;
