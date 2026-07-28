@@ -11,6 +11,24 @@ interface ChatMessageProps {
   onSelectSources?: (sources: SourceDocument[]) => void;
 }
 
+const markdownComponents = {
+  code({ node, inline, className, children, ...props }: any) {
+    const match = /language-(\w+)/.exec(className || '');
+    const language = match ? match[1] : '';
+    const content = String(children).replace(/\n$/, '');
+
+    if (!inline && language === 'mermaid') {
+      return <MermaidDiagram chart={content} />;
+    }
+
+    return (
+      <code className={className} {...props}>
+        {children}
+      </code>
+    );
+  },
+};
+
 export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onSelectSources }) => {
   const isUser = message.sender === 'user';
   const isNotFound = !isUser && (message.text.toLowerCase().includes('not found') || !message.sources || message.sources.length === 0) && message.id !== 'welcome-1';
@@ -20,9 +38,9 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onSelectSourc
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.18, ease: 'easeOut' }}
-      className={`flex w-full mb-4 ${isUser ? 'justify-end' : 'justify-start'}`}
+      className={`flex w-full max-w-full overflow-hidden mb-4 ${isUser ? 'justify-end' : 'justify-start'}`}
     >
-      <div className={`flex items-end gap-2 max-w-[85%] sm:max-w-[75%] md:max-w-[68%] ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+      <div className={`flex items-end gap-2 max-w-full sm:max-w-[85%] md:max-w-[80%] min-w-0 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
         {/* Avatar */}
         <div className={`flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center ${
           isUser ? 'bg-indigo-600 text-white' : 'bg-slate-800 border border-slate-700 text-violet-400'
@@ -33,8 +51,8 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onSelectSourc
         </div>
 
         {/* Bubble + meta */}
-        <div className={`flex flex-col gap-1 ${isUser ? 'items-end' : 'items-start'}`}>
-          <div className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed w-fit ${
+        <div className={`flex flex-col gap-1 min-w-0 max-w-full overflow-hidden ${isUser ? 'items-end' : 'items-start'}`}>
+          <div className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed max-w-full min-w-0 break-words overflow-hidden ${
             isUser
               ? 'bg-indigo-600 text-white rounded-br-sm'
               : 'glass-panel text-slate-200 border border-slate-800 rounded-bl-sm'
@@ -42,26 +60,8 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onSelectSourc
             {isUser ? (
               <p className="whitespace-pre-wrap break-words">{message.text}</p>
             ) : (
-              <div className="prose prose-invert prose-sm max-w-none prose-p:my-1 prose-p:leading-relaxed prose-pre:bg-slate-900 prose-pre:border prose-pre:border-slate-800 prose-pre:text-xs overflow-x-auto">
-                <ReactMarkdown
-                  components={{
-                    code({ node, inline, className, children, ...props }: any) {
-                      const match = /language-(\w+)/.exec(className || '');
-                      const language = match ? match[1] : '';
-                      const content = String(children).replace(/\n$/, '');
-
-                      if (!inline && language === 'mermaid') {
-                        return <MermaidDiagram chart={content} />;
-                      }
-
-                      return (
-                        <code className={className} {...props}>
-                          {children}
-                        </code>
-                      );
-                    },
-                  }}
-                >
+              <div className="prose prose-invert prose-sm max-w-full min-w-0 break-words prose-p:my-1 prose-p:leading-relaxed prose-pre:bg-slate-900 prose-pre:border prose-pre:border-slate-800 prose-pre:text-xs overflow-x-auto">
+                <ReactMarkdown components={markdownComponents}>
                   {preprocessMarkdownText(message.text)}
                 </ReactMarkdown>
               </div>

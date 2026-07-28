@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { QueryClient, QueryClientProvider, useMutation, useQuery } from '@tanstack/react-query';
 import { Header } from './components/Header';
 import { ChatMessage } from './components/ChatMessage';
@@ -132,8 +132,14 @@ function MainApp() {
     "What key features are highlighted?"
   ];
 
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, chatMutation.isPending]);
+
   return (
-    <div className="min-h-screen flex flex-col bg-[#090d16] text-slate-100">
+    <div className="min-h-screen h-screen flex flex-col bg-[#090d16] text-slate-100 overflow-hidden">
       {/* Render Global Header for RAG and Document pages only */}
       {activeTab !== 'gevernovai' && (
         <Header
@@ -153,54 +159,58 @@ function MainApp() {
       )}
 
       {activeTab === 'rag' && (
-        <>
-          <main className="flex-1 max-w-4xl w-full mx-auto px-3 sm:px-4 md:px-6 py-3 sm:py-4 md:py-6 flex flex-col justify-between">
-            <div className="flex-1 space-y-4 pb-6">
-              {messages.map((msg) => (
-                <ChatMessage
-                  key={msg.id}
-                  message={msg}
-                  onSelectSources={(sources) => {
-                    setActiveSources(sources);
-                    setIsDrawerOpen(true);
-                  }}
-                />
-              ))}
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+          <main className="flex-1 overflow-y-auto scroll-smooth px-3 sm:px-4 md:px-6 py-3 sm:py-4 md:py-6">
+            <div className="max-w-4xl mx-auto space-y-4 pb-6 min-h-full flex flex-col justify-between">
+              <div className="space-y-4">
+                {messages.map((msg) => (
+                  <ChatMessage
+                    key={msg.id}
+                    message={msg}
+                    onSelectSources={(sources) => {
+                      setActiveSources(sources);
+                      setIsDrawerOpen(true);
+                    }}
+                  />
+                ))}
 
-              {chatMutation.isPending && (
-                <div className="flex items-center space-x-3 p-4 rounded-2xl glass-panel text-slate-400 max-w-xs animate-pulse border border-slate-800">
-                  <Bot className="w-5 h-5 text-indigo-400 animate-bounce" />
-                  <span className="text-xs font-medium">Processing RAG Graph Workflow...</span>
+                {chatMutation.isPending && (
+                  <div className="flex items-center space-x-3 p-4 rounded-2xl glass-panel text-slate-400 max-w-xs animate-pulse border border-slate-800">
+                    <Bot className="w-5 h-5 text-indigo-400 animate-bounce" />
+                    <span className="text-xs font-medium">Processing RAG Graph Workflow...</span>
+                  </div>
+                )}
+              </div>
+
+              {messages.length === 1 && (
+                <div className="mt-6 mb-2 space-y-2">
+                  <p className="text-xs text-slate-400 font-medium flex items-center space-x-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Suggested Question Inquiries:</span>
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {dynamicPrompts.map((prompt, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleSendMessage(prompt)}
+                        className="px-3 py-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800/80 hover:border-slate-700 text-xs text-slate-300 hover:text-indigo-300 transition-colors text-left"
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
-            </div>
 
-            {messages.length === 1 && (
-              <div className="mb-6 space-y-2">
-                <p className="text-xs text-slate-400 font-medium flex items-center space-x-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Suggested Question Inquiries:</span>
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {dynamicPrompts.map((prompt, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleSendMessage(prompt)}
-                      className="px-3 py-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800/80 hover:border-slate-700 text-xs text-slate-300 hover:text-indigo-300 transition-all text-left"
-                    >
-                      {prompt}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+              <div ref={bottomRef} />
+            </div>
           </main>
 
           <InputBar
             onSend={handleSendMessage}
             isLoading={chatMutation.isPending}
           />
-        </>
+        </div>
       )}
 
       <SourceDrawer

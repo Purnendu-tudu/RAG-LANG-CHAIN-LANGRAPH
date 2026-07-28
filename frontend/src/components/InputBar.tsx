@@ -34,7 +34,7 @@ export const InputBar: React.FC<InputBarProps> = ({ onSend, isLoading }) => {
           placeholder="Ask a question about your indexed documents..."
           rows={1}
           disabled={isLoading}
-          className="flex-1 resize-none rounded-xl bg-slate-900/90 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 text-sm p-3 sm:p-3.5 focus:outline-none transition-all placeholder:text-slate-500 disabled:opacity-50 min-h-[44px] sm:min-h-[48px] max-h-28 overflow-y-auto"
+          className="flex-1 resize-none rounded-xl bg-slate-900/90 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 text-sm p-3 sm:p-3.5 focus:outline-none transition-colors placeholder:text-slate-500 disabled:opacity-50 min-h-[44px] sm:min-h-[48px] max-h-28 overflow-y-auto"
         />
         <button
           type="submit"

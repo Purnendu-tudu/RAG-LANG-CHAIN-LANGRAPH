@@ -6,16 +6,18 @@ import {
 
 mermaid.initialize({
   startOnLoad: false,
+  suppressErrorRendering: true,
   theme: 'dark',
   securityLevel: 'loose',
   fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   flowchart: {
     htmlLabels: true,
     useMaxWidth: false,
-    padding: 20,
-    nodeSpacing: 45,
-    rankSpacing: 45,
-    curve: 'basis',
+    padding: 30,
+    nodeSpacing: 50,
+    rankSpacing: 50,
+    subGraphTitleMargin: { top: 20, bottom: 20 },
+    curve: 'linear',
   },
   sequence: {
     useMaxWidth: false,
@@ -26,9 +28,17 @@ mermaid.initialize({
     .node foreignObject { overflow: visible !important; }
     .node foreignObject div { white-space: nowrap !important; padding: 4px 12px !important; display: inline-block !important; }
     .label foreignObject { overflow: visible !important; }
-    .cluster-label span, .cluster-label div { white-space: nowrap !important; padding: 4px 10px !important; font-weight: 600 !important; }
+    .cluster-label { overflow: visible !important; }
+    .cluster-label span, .cluster-label div, .cluster-label text {
+      white-space: nowrap !important;
+      padding: 4px 10px !important;
+      font-weight: 700 !important;
+      font-size: 13px !important;
+      color: #38bdf8 !important;
+      fill: #38bdf8 !important;
+    }
     .node label { font-family: inherit; }
-    svg { overflow: visible !important; }
+    svg { max-width: 100% !important; min-height: 120px !important; height: auto !important; overflow: visible !important; }
   `,
   themeVariables: {
     darkMode: true,
@@ -49,15 +59,40 @@ mermaid.initialize({
   },
 });
 
+function sanitizeMermaidChart(rawChart: string): string {
+  if (!rawChart) return '';
+  let clean = rawChart.trim();
+
+  // If sequenceDiagram, sanitize HTML tags like <br/> inside participant names & quotes
+  if (clean.includes('sequenceDiagram')) {
+    clean = clean.replace(/(participant|actor)\s+([A-Za-z0-9_]+)\s+as\s+"([^"]+)"/g, (match, type, id, label) => {
+      const sanitizedLabel = label.replace(/<br\s*\/?>/gi, ' - ').replace(/<[^>]+>/g, '');
+      return `${type} ${id} as "${sanitizedLabel}"`;
+    });
+
+    clean = clean.replace(/(")([^"]*<br\s*\/?>[^"]*)(")/gi, (match, q1, inner, q2) => {
+      return `${q1}${inner.replace(/<br\s*\/?>/gi, ' - ')}${q2}`;
+    });
+  }
+
+  return clean;
+}
+
+const svgCache = new Map<string, string>();
+
 interface MermaidDiagramProps {
   chart: string;
 }
 
-export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ chart }) => {
+const MermaidDiagramComponent: React.FC<MermaidDiagramProps> = ({ chart }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const modalCanvasRef = useRef<HTMLDivElement>(null);
 
-  const [svgContent, setSvgContent] = useState<string>('');
+  const [svgContent, setSvgContent] = useState<string>(() => {
+    if (!chart) return '';
+    const cleanChart = sanitizeMermaidChart(chart);
+    return svgCache.get(cleanChart) || '';
+  });
   const [error, setError] = useState<string | null>(null);
 
   // Modal & Pan/Zoom State
@@ -73,11 +108,23 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ chart }) => {
     const renderDiagram = async () => {
       if (!chart || !chart.trim()) return;
 
+      const cleanChart = sanitizeMermaidChart(chart);
+      if (svgCache.has(cleanChart)) {
+        if (isMounted) {
+          setSvgContent(svgCache.get(cleanChart)!);
+          setError(null);
+        }
+        return;
+      }
+
+      // Clean up any lingering error banners injected by Mermaid
+      document.querySelectorAll('[id^="dmermaid"], .error-icon, .error-text').forEach((el) => el.remove());
+
       const uniqueId = `mermaid-svg-${Math.random().toString(36).substring(2, 9)}`;
 
       try {
-        const cleanChart = chart.trim();
         const { svg } = await mermaid.render(uniqueId, cleanChart);
+        svgCache.set(cleanChart, svg);
         if (isMounted) {
           setSvgContent(svg);
           setError(null);
@@ -219,20 +266,20 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ chart }) => {
 
   return (
     <>
-      {/* ── Inline Diagram Thumbnail Preview */}
+      {/* ── Full Response Width Diagram Display */}
       <div
         ref={containerRef}
         onClick={() => setIsModalOpen(true)}
-        className="group relative my-3 p-4 glass-panel border border-slate-800/80 hover:border-indigo-500/50 rounded-xl overflow-x-auto flex justify-center items-center bg-slate-950/60 shadow-lg min-h-[120px] cursor-pointer transition-all duration-200"
-        title="Click to expand, zoom & save"
+        className="group relative my-3 p-4 glass-panel border border-slate-800/80 hover:border-indigo-500/50 rounded-2xl overflow-x-auto max-w-full min-w-0 min-h-[140px] flex-shrink-0 flex flex-col items-center bg-slate-950/80 shadow-lg cursor-pointer transition-all duration-200"
+        title="Click to pop-out, zoom & save diagram"
       >
-        <div dangerouslySetInnerHTML={{ __html: svgContent }} />
+        <div className="w-full max-w-full min-h-[120px] flex-shrink-0 overflow-x-auto flex justify-center py-2" dangerouslySetInnerHTML={{ __html: svgContent }} />
 
-        {/* Hover overlay indicator */}
-        <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl backdrop-blur-[2px]">
-          <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-indigo-600/90 text-white text-xs font-semibold shadow-lg transform group-hover:scale-105 transition-transform">
-            <Maximize2 className="w-3.5 h-3.5" />
-            <span>Click to Expand & Zoom</span>
+        {/* Top-Right Interactive Pop-Out Badge */}
+        <div className="absolute top-3 right-3 opacity-75 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-indigo-600/90 group-hover:bg-indigo-500 text-white text-xs font-medium shadow-md shadow-indigo-600/20 transition-all">
+            <Maximize2 className="w-3 h-3" />
+            <span>Pop-out & Zoom</span>
           </div>
         </div>
       </div>
@@ -350,3 +397,5 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ chart }) => {
     </>
   );
 };
+
+export const MermaidDiagram = React.memo(MermaidDiagramComponent);

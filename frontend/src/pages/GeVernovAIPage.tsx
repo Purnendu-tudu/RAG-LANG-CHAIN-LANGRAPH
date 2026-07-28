@@ -17,6 +17,24 @@ const API_BASE = 'http://localhost:8000';
 
 interface IndexedDoc { filename: string; chunk_count: number; }
 
+const markdownComponents = {
+  code({ node, inline, className, children, ...props }: any) {
+    const match = /language-(\w+)/.exec(className || '');
+    const language = match ? match[1] : '';
+    const content = String(children).replace(/\n$/, '');
+
+    if (!inline && language === 'mermaid') {
+      return <MermaidDiagram chart={content} />;
+    }
+
+    return (
+      <code className={className} {...props}>
+        {children}
+      </code>
+    );
+  },
+};
+
 export const GeVernovAIPage: React.FC = () => {
   const [provider, setProvider] = useState<LLMProvider>('google');
   const [queryMode, setQueryMode] = useState<QueryMode>('qa');
@@ -243,7 +261,7 @@ export const GeVernovAIPage: React.FC = () => {
 
 
       {/* ── Chat messages */}
-      <div className="flex-1 overflow-y-auto px-3 sm:px-4 md:px-6 py-4 space-y-4 max-w-4xl w-full mx-auto">
+      <div className="flex-1 overflow-y-auto scroll-smooth px-3 sm:px-4 md:px-6 py-4 space-y-4 max-w-4xl w-full mx-auto">
         {messages.map((msg) => {
           const isUser = msg.sender === 'user';
           const citation = !isUser ? getFirstCitation(msg.sources) : null;
@@ -254,9 +272,9 @@ export const GeVernovAIPage: React.FC = () => {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.18 }}
-              className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'}`}
+              className={`flex w-full max-w-full overflow-hidden ${isUser ? 'justify-end' : 'justify-start'}`}
             >
-              <div className={`flex items-end gap-2 max-w-[85%] sm:max-w-[75%] md:max-w-[68%] ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+              <div className={`flex items-end gap-2 max-w-full sm:max-w-[85%] md:max-w-[80%] min-w-0 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
                 {/* Avatar — small, sits at bottom of bubble */}
                 <div className={`flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center ${
                   isUser ? 'bg-sky-500 text-slate-950' : 'bg-slate-800 border border-sky-500/20 text-sky-400'
@@ -265,12 +283,12 @@ export const GeVernovAIPage: React.FC = () => {
                 </div>
 
                 {/* Bubble + meta — shrinks to content */}
-                <div className={`flex flex-col gap-1 ${isUser ? 'items-end' : 'items-start'}`}>
+                <div className={`flex flex-col gap-1 min-w-0 max-w-full overflow-hidden ${isUser ? 'items-end' : 'items-start'}`}>
                   <span className="text-[10px] text-slate-600">
                     {msg.timestamp}
                   </span>
 
-                  <div className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed w-fit ${
+                  <div className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed max-w-full min-w-0 break-words overflow-hidden ${
                     isUser
                       ? 'bg-sky-500 text-white rounded-br-sm'
                       : 'bg-slate-800/80 text-slate-100 border border-slate-700/60 rounded-bl-sm'
@@ -278,26 +296,10 @@ export const GeVernovAIPage: React.FC = () => {
                     {isUser ? (
                       <p className="whitespace-pre-wrap break-words">{msg.text}</p>
                     ) : (
-                      <div className="prose prose-invert prose-sm max-w-none prose-p:my-1 prose-p:leading-relaxed prose-pre:bg-slate-950 prose-pre:border prose-pre:border-sky-500/20 prose-pre:text-xs prose-table:text-xs overflow-x-auto">
+                      <div className="prose prose-invert prose-sm max-w-full min-w-0 break-words prose-p:my-1 prose-p:leading-relaxed prose-pre:bg-slate-950 prose-pre:border prose-pre:border-sky-500/20 prose-pre:text-xs prose-table:text-xs overflow-x-auto">
                         <ReactMarkdown
                           remarkPlugins={[remarkGfm]}
-                          components={{
-                            code({ node, inline, className, children, ...props }: any) {
-                              const match = /language-(\w+)/.exec(className || '');
-                              const language = match ? match[1] : '';
-                              const content = String(children).replace(/\n$/, '');
-
-                              if (!inline && language === 'mermaid') {
-                                return <MermaidDiagram chart={content} />;
-                              }
-
-                              return (
-                                <code className={className} {...props}>
-                                  {children}
-                                </code>
-                              );
-                            },
-                          }}
+                          components={markdownComponents}
                         >
                           {preprocessMarkdownText(msg.text)}
                         </ReactMarkdown>
@@ -385,8 +387,7 @@ export const GeVernovAIPage: React.FC = () => {
               placeholder=""
               disabled={gevMutation.isPending}
               rows={1}
-              className="flex-1 rounded-xl bg-slate-950 border border-sky-500/30 focus:border-sky-400 focus:ring-1 focus:ring-sky-400 text-slate-100 text-sm p-3 sm:p-3.5 focus:outline-none transition-all disabled:opacity-50 resize-none min-h-[44px] sm:min-h-[48px] max-h-28 overflow-y-auto"
-              style={{ fieldSizing: 'content' } as React.CSSProperties}
+              className="flex-1 rounded-xl bg-slate-950 border border-sky-500/30 focus:border-sky-400 focus:ring-1 focus:ring-sky-400 text-slate-100 text-sm p-3 sm:p-3.5 focus:outline-none transition-colors disabled:opacity-50 resize-none min-h-[44px] sm:min-h-[48px] max-h-28 overflow-y-auto"
             />
             <button
               type="submit"
