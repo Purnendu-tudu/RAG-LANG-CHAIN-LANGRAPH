@@ -149,6 +149,26 @@ const PRESETS = [
   "What is the torque specification for turbine blade nuts?",
 ];
 
+const generateLangGraphMermaid = (activeStepIdx: number, isExec: boolean) => {
+  const stepIds = ['N1', 'N2', 'N3', 'N4', 'N5', 'N6', 'N7', 'N8'];
+  const activeId = activeStepIdx >= 0 && activeStepIdx < 8 ? stepIds[activeStepIdx] : (isExec ? 'START' : 'N8');
+
+  return `flowchart LR
+  START(["__start__"]) --> N1["1. input_handler"]
+  N1 --> N2["2. validate_input_guard"]
+  N2 --> N3{"3. route_query"}
+  N3 --> N4[("4. retrieve_node")]
+  N4 --> N5["5. format_docs"]
+  N5 --> N6["6. generate_node"]
+  N6 --> N7["7. extract_text_from_llm_response"]
+  N7 --> N8["8. ui_render"]
+  N8 --> END(["__end__"])
+
+  class ${activeId} activeNode;
+  classDef activeNode fill:#f59e0b,stroke:#fbbf24,stroke-width:3px,color:#020617,font-weight:bold;
+  classDef default fill:#0f172a,stroke:#334155,color:#cbd5e1;`;
+};
+
 const markdownComponents = {
   code({ node, inline, className, children, ...props }: any) {
     const match = /language-(\w+)/.exec(className || '');
@@ -346,7 +366,7 @@ export const LivePresentationPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#060a12] text-slate-100 font-sans">
+    <div className="min-h-screen w-full flex flex-col bg-[#060a12] text-slate-100 font-sans overflow-y-auto">
 
       {/* ── Standalone Custom Header */}
       <header className="sticky top-0 z-30 w-full glass-panel border-b border-amber-500/20 bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950/30 px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-4 shadow-2xl">
@@ -545,12 +565,32 @@ export const LivePresentationPage: React.FC = () => {
           </div>
         </div>
 
+        {/* ── Animated LangGraph State Machine Topology Node Graph */}
+        <div className="glass-panel p-5 rounded-2xl border border-amber-500/30 bg-slate-950/90 space-y-3 shadow-xl">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className="flex items-center space-x-2">
+              <Layers className="w-4 h-4 text-amber-400 animate-pulse" />
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                LangGraph State Machine Topology (Animated Node Flow)
+              </h2>
+            </div>
+            <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              Active Node: #{activeCheckpointIndex + 1} ({INITIAL_CHECKPOINTS[activeCheckpointIndex]?.label})
+            </span>
+          </div>
+
+          {/* Dynamic Animated Mermaid Node Flow */}
+          <div className="pt-1 overflow-x-auto">
+            <MermaidDiagram chart={generateLangGraphMermaid(activeCheckpointIndex, isExecuting)} />
+          </div>
+        </div>
+
         {/* ── Main Execution Output & Live Audit Log */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-          {/* Left: Rendered Markdown & Full Height Mermaid Diagram (8 Cols) */}
-          <div className="lg:col-span-8 glass-panel p-5 sm:p-6 rounded-2xl border border-slate-800 bg-slate-950/90 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          {/* Left: Rendered Markdown & Full Height Mermaid Diagram (8 Cols) with Internal Scrollbar */}
+          <div className="lg:col-span-8 glass-panel p-5 sm:p-6 rounded-2xl border border-slate-800 bg-slate-950/90 space-y-4 flex flex-col h-[560px]">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 flex-shrink-0">
               <div className="flex items-center space-x-2">
                 <Sparkles className="w-4 h-4 text-amber-400" />
                 <h2 className="text-xs font-bold uppercase tracking-wider text-slate-200">
@@ -564,54 +604,57 @@ export const LivePresentationPage: React.FC = () => {
               )}
             </div>
 
-            {!executionResult && !isExecuting && (
-              <div className="p-12 text-center text-slate-500 space-y-3">
-                <Zap className="w-8 h-8 text-amber-400/40 mx-auto animate-bounce" />
-                <p className="text-xs font-medium">No live query execution currently active.</p>
-                <p className="text-[11px] text-slate-600">Enter a custom query above or click a preset to watch live node checkpoints.</p>
-              </div>
-            )}
-
-            {isExecuting && !executionResult && (
-              <div className="p-12 text-center space-y-4">
-                <Loader2 className="w-8 h-8 text-amber-400 animate-spin mx-auto" />
-                <p className="text-xs font-mono text-amber-300">
-                  Executing LangGraph state machine node: <b>{INITIAL_CHECKPOINTS[activeCheckpointIndex]?.label}</b>...
-                </p>
-              </div>
-            )}
-
-            {executionResult && (
-              <div className="space-y-4">
-                <div className="prose prose-invert prose-sm max-w-full min-w-0 break-words prose-p:my-1 prose-p:leading-relaxed prose-pre:bg-slate-900 prose-pre:border prose-pre:border-slate-800 prose-pre:text-xs overflow-x-auto">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                    {preprocessMarkdownText(executionResult.answer)}
-                  </ReactMarkdown>
+            {/* Scrollable Container */}
+            <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-amber-500/20 scrollbar-track-slate-900 space-y-4">
+              {!executionResult && !isExecuting && (
+                <div className="p-12 text-center text-slate-500 space-y-3">
+                  <Zap className="w-8 h-8 text-amber-400/40 mx-auto animate-bounce" />
+                  <p className="text-xs font-medium">No live query execution currently active.</p>
+                  <p className="text-[11px] text-slate-600">Enter a custom query above or click a preset to watch live node checkpoints.</p>
                 </div>
+              )}
 
-                {/* Sources list */}
-                {executionResult.sources && executionResult.sources.length > 0 && (
-                  <div className="pt-4 border-t border-slate-800/80 space-y-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
-                      <Database className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Grounded Citations ({executionResult.sources.length}):</span>
-                    </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {executionResult.sources.map((src, i) => (
-                        <div key={i} className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs space-y-1">
-                          <div className="font-semibold text-sky-400 truncate">
-                            📄 {src.metadata?.source || 'Indexed Document'} (p. {src.metadata?.page || 1})
-                          </div>
-                          <p className="text-[11px] text-slate-400 line-clamp-2">
-                            "{src.content}"
-                          </p>
-                        </div>
-                      ))}
-                    </div>
+              {isExecuting && !executionResult && (
+                <div className="p-12 text-center space-y-4">
+                  <Loader2 className="w-8 h-8 text-amber-400 animate-spin mx-auto" />
+                  <p className="text-xs font-mono text-amber-300">
+                    Executing LangGraph state machine node: <b>{INITIAL_CHECKPOINTS[activeCheckpointIndex]?.label}</b>...
+                  </p>
+                </div>
+              )}
+
+              {executionResult && (
+                <div className="space-y-4">
+                  <div className="prose prose-invert prose-sm max-w-full min-w-0 break-words prose-p:my-1 prose-p:leading-relaxed prose-pre:bg-slate-900 prose-pre:border prose-pre:border-slate-800 prose-pre:text-xs overflow-x-auto">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                      {preprocessMarkdownText(executionResult.answer)}
+                    </ReactMarkdown>
                   </div>
-                )}
-              </div>
-            )}
+
+                  {/* Sources list */}
+                  {executionResult.sources && executionResult.sources.length > 0 && (
+                    <div className="pt-4 border-t border-slate-800/80 space-y-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
+                        <Database className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Grounded Citations ({executionResult.sources.length}):</span>
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {executionResult.sources.map((src, i) => (
+                          <div key={i} className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs space-y-1">
+                            <div className="font-semibold text-sky-400 truncate">
+                              📄 {src.metadata?.source || 'Indexed Document'} (p. {src.metadata?.page || 1})
+                            </div>
+                            <p className="text-[11px] text-slate-400 line-clamp-2">
+                              "{src.content}"
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Right: Live Terminal Audit Log (4 Cols) */}

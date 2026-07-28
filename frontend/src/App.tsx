@@ -148,7 +148,7 @@ function MainApp() {
   }, [messages, chatMutation.isPending]);
 
   return (
-    <div className="min-h-screen h-screen flex flex-col bg-[#090d16] text-slate-100 overflow-hidden">
+    <div className={`min-h-screen flex flex-col bg-[#090d16] text-slate-100 ${activeTab === 'rag' ? 'h-screen overflow-hidden' : 'min-h-screen overflow-y-auto'}`}>
       {/* Render Global Header for RAG, Document, Presentation pages only */}
       {activeTab !== 'gevernovai' && activeTab !== 'livepresentation' && (
         <Header
