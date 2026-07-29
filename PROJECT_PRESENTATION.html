@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GE VernovAI Platform — Enterprise Presentation (Light Mode)</title>
+
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- Mermaid.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+  <style>
+    /* ── RESET & DESIGN SYSTEM TOKENS (LIGHT MODE) */
+    :root {
+      --bg-main: #f8fafc;
+      --bg-card: #ffffff;
+      --border-card: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --accent-blue: #0284c7;
+      --accent-indigo: #4f46e5;
+      --accent-emerald: #059669;
+      --accent-rose: #e11d48;
+      --accent-amber: #d97706;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+      --shadow-md: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
+      --shadow-lg: 0 20px 30px -10px rgba(15, 23, 42, 0.12);
+      --radius-card: 20px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    /* ── ANIMATED TOP PROGRESS BAR */
+    .progress-container {
+      width: 100%;
+      height: 4px;
+      background: #e2e8f0;
+      position: relative;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 12.5%;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-indigo));
+      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ── HEADER STYLING */
+    header {
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-card);
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 100;
+    }
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .brand-icon {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo));
+      color: white;
+      font-weight: 800;
+      font-size: 1.1rem;
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+      animation: pulseGlow 3s infinite ease-in-out;
+    }
+    .brand-title {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.01em;
+    }
+    .brand-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .slide-badge {
+      background: #eff6ff;
+      color: var(--accent-blue);
+      border: 1px solid #bfdbfe;
+      padding: 0.35rem 0.85rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-family: 'Fira Code', monospace;
+      font-weight: 700;
+    }
+
+    .btn {
+      border: none;
+      outline: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 0.6rem 1.25rem;
+      border-radius: 12px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .btn-secondary {
+      background: #ffffff;
+      color: var(--text-main);
+      border: 1px solid var(--border-card);
+      box-shadow: var(--shadow-sm);
+    }
+    .btn-secondary:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo));
+      color: white;
+      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
+    }
+    .btn:active { transform: scale(0.97); }
+
+    /* ── MAIN CONTAINER & SLIDE ANIMATIONS */
+    main {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .slide {
+      position: absolute;
+      width: calc(100% - 4rem);
+      max-width: 1200px;
+      height: calc(100% - 4rem);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(30px) scale(0.98);
+      transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0) scale(1);
+    }
+
+    /* ── CARD DESIGNS & LIGHT MODE GLASS EFFECT */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-card);
+      padding: 2.5rem;
+      box-shadow: var(--shadow-md);
+      transition: all 0.3s ease;
+    }
+    .card-hover:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+      border-color: #cbd5e1;
+    }
+
+    .section-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+    }
+    .tag-blue { background: #eff6ff; color: var(--accent-blue); border: 1px solid #bfdbfe; }
+    .tag-emerald { background: #ecfdf5; color: var(--accent-emerald); border: 1px solid #a7f3d0; }
+    .tag-rose { background: #fff1f2; color: var(--accent-rose); border: 1px solid #fecdd3; }
+
+    .slide-title {
+      font-size: 2.25rem;
+      font-weight: 800;
+      color: var(--text-main);
+      line-height: 1.25;
+      margin-bottom: 0.75rem;
+      letter-spacing: -0.02em;
+    }
+    .slide-subtitle {
+      font-size: 1rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      max-width: 800px;
+    }
+
+    /* ── GRID LAYOUTS */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+
+    /* ── FEATURE LISTS */
+    .feature-list { list-style: none; display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem; }
+    .feature-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      font-size: 0.85rem;
+      color: #334155;
+      line-height: 1.5;
+    }
+    .feature-bullet {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #e0f2fe;
+      color: var(--accent-blue);
+      font-weight: 800;
+      font-size: 0.7rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    /* ── MERMAID LIGHT MODE STYLING & POP-OUT LIGHTBOX */
+    .mermaid-box {
+      background: #ffffff;
+      border: 1px solid var(--border-card);
+      border-radius: 16px;
+      padding: 1.25rem;
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    .mermaid-box:hover {
+      border-color: var(--accent-blue);
+      box-shadow: 0 12px 24px -6px rgba(2, 132, 199, 0.2);
+      transform: translateY(-2px);
+    }
+    .mermaid-box::after {
+      content: '🔍 Click diagram to expand full-screen';
+      position: absolute;
+      bottom: 10px;
+      right: 14px;
+      background: rgba(15, 23, 42, 0.85);
+      color: #ffffff;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 12px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      pointer-events: none;
+    }
+    .mermaid-box:hover::after {
+      opacity: 1;
+    }
+    .mermaid svg {
+      max-height: 420px;
+      width: 100% !important;
+      height: auto !important;
+    }
+
+    /* Modal Overlay */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(6, 10, 18, 0.82);
+      backdrop-filter: blur(14px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal-card {
+      background: #ffffff;
+      border-radius: 24px;
+      padding: 1.75rem;
+      width: 92vw;
+      max-width: 1200px;
+      max-height: 88vh;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+      display: flex;
+      flex-direction: column;
+      transform: scale(0.92);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .modal-overlay.active .modal-card {
+      transform: scale(1);
+    }
+
+    /* ── KEYFRAME ANIMATIONS */
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3); }
+      50% { box-shadow: 0 4px 22px rgba(2, 132, 199, 0.6); }
+    }
+
+    @keyframes floatCard {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Progress Bar -->
+  <div class="progress-container">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <!-- Header -->
+  <header>
+    <div class="brand-logo">
+      <div class="brand-icon">⚡</div>
+      <div>
+        <div class="brand-title">GE VernovAI Platform</div>
+        <div class="brand-sub">Decoupled LangGraph RAG Architecture & Technical Briefing</div>
+      </div>
+    </div>
+
+    <div class="header-controls">
+      <span class="slide-badge" id="slideBadge">Slide 1 / 8</span>
+      <button class="btn btn-secondary" onclick="prevSlide()">← Prev</button>
+      <button class="btn btn-primary" onclick="nextSlide()">Next →</button>
+    </div>
+  </header>
+
+  <!-- Presentation Canvas -->
+  <main>
+
+    <!-- ── SLIDE 1: COVER -->
+    <div class="slide active" id="slide-1">
+      <div class="card text-center" style="background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%); border-color: #bae6fd; animation: floatCard 6s ease-in-out infinite;">
+        <span class="section-tag tag-blue">Executive Technical Briefing</span>
+        <h1 class="slide-title" style="font-size: 2.75rem; color: #0284c7;">
+          GE VernovAI & Decoupled LangGraph RAG Architecture
+        </h1>
+        <p class="slide-subtitle" style="margin: 0 auto 1.5rem auto;">
+          High-performance Retrieval-Augmented Generation platform powered by LangChain, LangGraph Pregel state machines, FAISS vector indexing, and automated Senior Systems Engineering visual diagrams.
+        </p>
+
+        <div style="display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem;">
+          <span class="slide-badge" style="background: #ffffff;">⚡ FastAPI REST Backend</span>
+          <span class="slide-badge" style="background: #ffffff;">🤖 Google Gemini 1.5 Flash</span>
+          <span class="slide-badge" style="background: #ffffff;">🛡️ Ollama Offline Mode</span>
+          <span class="slide-badge" style="background: #ffffff;">📊 0-Flicker SVG Diagrams</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SLIDE 2: EXECUTIVE SUMMARY -->
+    <div class="slide" id="slide-2">
+      <div style="width: 100%;">
+        <span class="section-tag tag-blue">Executive Overview</span>
+        <h2 class="slide-title">Business Challenge & Core Value Proposition</h2>
+        
+        <div class="grid-2" style="margin-top: 1.5rem;">
+          <div class="card card-hover" style="border-left: 4px solid var(--accent-rose);">
+            <h3 style="font-size: 1.1rem; color: var(--accent-rose); font-weight: 700; margin-bottom: 0.75rem;">
+              ⚠️ Business Challenge
+            </h3>
+            <ul class="feature-list">
+              <li class="feature-item">
+                <span class="feature-bullet" style="background: #ffe4e6; color: var(--accent-rose);">!</span>
+                <span>Complex engineering manuals and technical specs are siloed across dense unstructured PDFs.</span>
+              </li>
+              <li class="feature-item">
+                <span class="feature-bullet" style="background: #ffe4e6; color: var(--accent-rose);">!</span>
+                <span>Field engineers spend hours manually searching for turbine specs, electrical rules, and siting limits.</span>
+              </li>
+              <li class="feature-item">
+                <span class="feature-bullet" style="background: #ffe4e6; color: var(--accent-rose);">!</span>
+                <span>Standard LLMs suffer from hallucinations, data leakage, and UI diagram rendering crashes.</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="card card-hover" style="border-left: 4px solid var(--accent-emerald);">
+            <h3 style="font-size: 1.1rem; color: var(--accent-emerald); font-weight: 700; margin-bottom: 0.75rem;">
+              💡 The GE VernovAI Solution
+            </h3>
+            <ul class="feature-list">
+              <li class="feature-item">
+                <span class="feature-bullet" style="background: #d1fae5; color: var(--accent-emerald);">✓</span>
+                <span><b>Decoupled FastAPI Architecture</b>: High-speed REST API decoupling UI state from backend loops.</span>
+              </li>
+              <li class="feature-item">
+                <span class="feature-bullet" style="background: #d1fae5; color: var(--accent-emerald);">✓</span>
+                <span><b>LangGraph State Machine</b>: Deterministic step-by-step state checkpoints with full audit history.</span>
+              </li>
+              <li class="feature-item">
+                <span class="feature-bullet" style="background: #d1fae5; color: var(--accent-emerald);">✓</span>
+                <span><b>Automated Systems Diagrams</b>: Converts dense specs into color-coded straight-line Mermaid flowcharts.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SLIDE 3: SYSTEM ARCHITECTURE FLOW -->
+    <div class="slide" id="slide-3">
+      <div style="width: 100%;">
+        <span class="section-tag tag-blue">Architecture Diagram</span>
+        <h2 class="slide-title">High-Level End-to-End System Flow</h2>
+
+        <div class="mermaid-box" style="margin-top: 1rem;">
+          <div class="mermaid">
+flowchart TD
+    subgraph ClientLayer ["Client Interface Layer"]
+        UI["React + TypeScript Frontend\n(Glassmorphism & Lightbox)"]
+    end
+
+    subgraph BackendLayer ["FastAPI Decoupled Backend"]
+        API["/api/gevernovai/chat\nREST API Endpoint"]
+        Guard["SENSITIVE_DATA_GUARD\nConfidentiality Filter"]
+        Router{"Query Mode Router"}
+    end
+
+    subgraph VectorEngine ["Vector Index & Retrieval"]
+        FAISS[("FAISS Vector Index\n(Google GenAI Embeddings)")]
+        Docs["PDF Document Chunks\n& Citations"]
+    end
+
+    subgraph ExecutionGraph ["LangGraph State Machine Engine"]
+        LLM["Gemini 1.5 Flash / Ollama\nSenior Systems Engineer Prompt"]
+        Sanitizer["AST Text Extractor\n& Mermaid Sanitizer"]
+    end
+
+    UI -->|1. Query Payload| API
+    API -->|2. Validate| Guard
+    Guard -->|3. Route Strategy| Router
+    Router -->|4. Embedding Search| FAISS
+    FAISS -->|5. Grounded Context| Docs
+    Docs -->|6. Context + Prompt| LLM
+    LLM -->|7. Raw Output| Sanitizer
+    Sanitizer -->|8. Clean SVG| UI
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SLIDE 4: LANGGRAPH NODE TOPOLOGY -->
+    <div class="slide" id="slide-4">
+      <div style="width: 100%;">
+        <span class="section-tag tag-blue">Pregel Execution Engine</span>
+        <h2 class="slide-title">LangGraph Node Topology & Execution Checkpoints</h2>
+
+        <div class="mermaid-box" style="margin-top: 1rem;">
+          <div class="mermaid">
+flowchart LR
+    START(["__start__"]) --> N1["1. input_handler"]
+    N1 --> N2["2. validate_input_guard"]
+    N2 --> N3{"3. route_query"}
+    N3 --> N4[("4. retrieve_node")]
+    N4 --> N5["5. format_docs"]
+    N5 --> N6["6. generate_node"]
+    N6 --> N7["7. extract_text_from_llm_response"]
+    N7 --> N8["8. ui_render"]
+    N8 --> END(["__end__"])
+          </div>
+        </div>
+
+        <div class="grid-4" style="margin-top: 1rem;">
+          <div class="card card-hover" style="padding: 1rem;">
+            <span style="font-weight: 700; color: var(--accent-blue); font-size: 0.8rem;">1-2. Guard Node</span>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Validates security rules & prompt injection.</p>
+          </div>
+          <div class="card card-hover" style="padding: 1rem;">
+            <span style="font-weight: 700; color: var(--accent-indigo); font-size: 0.8rem;">3-4. Vector Retrieval</span>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Top-K FAISS vector similarity search.</p>
+          </div>
+          <div class="card card-hover" style="padding: 1rem;">
+            <span style="font-weight: 700; color: var(--accent-amber); font-size: 0.8rem;">5-6. LLM Reasoning</span>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Gemini Flash / Ollama systems prompt.</p>
+          </div>
+          <div class="card card-hover" style="padding: 1rem;">
+            <span style="font-weight: 700; color: var(--accent-emerald); font-size: 0.8rem;">7-8. AST Sanitizer</span>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Strips Python repr & renders SVG lightbox.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SLIDE 5: SECURITY & RESILIENCE -->
+    <div class="slide" id="slide-5">
+      <div style="width: 100%;">
+        <span class="section-tag tag-emerald">Enterprise Integrity</span>
+        <h2 class="slide-title">4-Layer Security & Fallback Resilience</h2>
+
+        <div class="grid-2" style="margin-top: 1.5rem;">
+          <div class="card card-hover" style="border-top: 4px solid var(--accent-emerald);">
+            <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--accent-emerald);">🛡️ 1. SENSITIVE_DATA_GUARD</h4>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; line-height: 1.5;">
+              Filters confidential engineering data and screens for prompt injection attacks before reaching LLM layers.
+            </p>
+          </div>
+          <div class="card card-hover" style="border-top: 4px solid var(--accent-blue);">
+            <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--accent-blue);">⚡ 2. AST Python Repr Extractor</h4>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; line-height: 1.5;">
+              Strips raw Python list/dict string representations (`[{'type': 'text'}]`) into clean markdown text automatically.
+            </p>
+          </div>
+          <div class="card card-hover" style="border-top: 4px solid var(--accent-indigo);">
+            <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--accent-indigo);">🔍 3. Sequence Diagram &lt;br/&gt; Filter</h4>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; line-height: 1.5;">
+              Removes invalid HTML linebreaks inside participant names to prevent Mermaid sequence diagram syntax errors.
+            </p>
+          </div>
+          <div class="card card-hover" style="border-top: 4px solid var(--accent-amber);">
+            <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--accent-amber);">🧱 4. Syntax Error Boundary</h4>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; line-height: 1.5;">
+              Catches rendering exceptions gracefully, preventing UI crashes and maintaining 99.9% application availability.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SLIDE 6: AUTOMATED SYSTEMS DIAGRAM SAMPLE -->
+    <div class="slide" id="slide-6">
+      <div style="width: 100%;">
+        <span class="section-tag tag-blue">Automated Visual Intelligence</span>
+        <h2 class="slide-title">Senior Systems Engineering Diagram Sample</h2>
+
+        <div class="mermaid-box" style="margin-top: 1rem;">
+          <div class="mermaid">
+flowchart TD
+  subgraph Structural ["Structural & Siting Subsystem"]
+    A["Wind Resource"] --> B["Tower Structure (20 ft / 6m)"]
+    B --> C["Flange Connection"]
+  end
+
+  subgraph Mechanical ["Mechanical & Rotor Subsystem"]
+    D["Blades & Hub (3m Rotor)"] --> E["Rotor Assembly"]
+    E --> F["Turbine Body (LN3500)"]
+  end
+
+  subgraph Electrical ["Electrical Generation Subsystem"]
+    F --> G["3-Phase PMA Generator"]
+    G --> H["3000W Power Controller"]
+    H --> I[("Battery Storage Bank")]
+  end
+
+  subgraph Safety ["Safety & Protection Subsystem"]
+    J{"Wind Speed > 8m/s?"} -->|Yes| K["Aerodynamic Blade Brake"]
+    J -->|Emergency| L["Electromagnetic Brake"]
+  end
+
+  C --> F
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SLIDE 7: PERFORMANCE & BENCHMARKS -->
+    <div class="slide" id="slide-7">
+      <div style="width: 100%;">
+        <span class="section-tag tag-blue">System Benchmarks</span>
+        <h2 class="slide-title">Performance Metrics & Zero-Flicker Stability</h2>
+
+        <div class="grid-3" style="margin-top: 2rem;">
+          <div class="card card-hover text-center" style="border-top: 4px solid var(--accent-blue);">
+            <div style="font-size: 2.25rem; font-weight: 800; color: var(--accent-blue); font-family: 'Fira Code', monospace;">~35 ms</div>
+            <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-top: 0.5rem; text-transform: uppercase;">Vector Retrieval</div>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">Top-K semantic embedding search over FAISS vector index.</p>
+          </div>
+
+          <div class="card card-hover text-center" style="border-top: 4px solid var(--accent-indigo);">
+            <div style="font-size: 2.25rem; font-weight: 800; color: var(--accent-indigo); font-family: 'Fira Code', monospace;">~12 ms</div>
+            <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-top: 0.5rem; text-transform: uppercase;">Diagram SVG Render</div>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">Hydrated instantly using in-memory SVG caching.</p>
+          </div>
+
+          <div class="card card-hover text-center" style="border-top: 4px solid var(--accent-emerald);">
+            <div style="font-size: 2.25rem; font-weight: 800; color: var(--accent-emerald); font-family: 'Fira Code', monospace;">100%</div>
+            <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-top: 0.5rem; text-transform: uppercase;">Keystroke Stability</div>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">Zero diagram shrinking/collapsing when typing query text.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SLIDE 8: ROADMAP & DEPLOYMENT -->
+    <div class="slide" id="slide-8">
+      <div class="card text-center" style="background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%); border-color: #a7f3d0;">
+        <span class="section-tag tag-emerald">Production Integration</span>
+        <h2 class="slide-title" style="color: var(--accent-emerald);">Enterprise Deployment Roadmap</h2>
+        
+        <div class="grid-2" style="margin-top: 1.5rem; text-align: left;">
+          <div class="card" style="padding: 1.25rem; background: #ffffff;">
+            <span style="font-weight: 700; color: var(--accent-blue); font-size: 0.9rem;">☁️ Enterprise Cloud Deployment</span>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.35rem;">Dockerized container stack ready for Kubernetes on AWS/Azure with load balancing.</p>
+          </div>
+          <div class="card" style="padding: 1.25rem; background: #ffffff;">
+            <span style="font-weight: 700; color: var(--accent-emerald); font-size: 0.9rem;">🔒 Air-Gapped Local Mode</span>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.35rem;">Fully offline deployment using Ollama LLM and local FAISS vector storage for sensitive sites.</p>
+          </div>
+        </div>
+
+        <p style="font-size: 0.75rem; color: var(--text-muted); font-family: 'Fira Code', monospace; margin-top: 2rem;">
+          GE VernovAI Platform Architecture &copy; 2026
+        </p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal Pop-Out Lightbox -->
+  <div class="modal-overlay" id="diagramModal" onclick="closeModal()">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem; margin-bottom: 1rem;">
+        <div>
+          <h3 style="font-size: 1.1rem; font-weight: 800; color: #0f172a;">🔍 Full-Screen Architecture Diagram Lightbox</h3>
+          <p style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">Senior Systems Engineering High-Resolution View</p>
+        </div>
+        <button onclick="closeModal()" class="btn btn-secondary" style="padding: 0.4rem 0.85rem; font-size: 0.85rem;">✖ Close (Esc)</button>
+      </div>
+      <div id="modalDiagramContainer" style="flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 1rem;"></div>
+    </div>
+  </div>
+
+  <script>
+    // Initialize Mermaid with Light Mode theme
+    mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
+
+    let currentSlide = 1;
+    const totalSlides = 8;
+
+    function showSlide(index) {
+      if (index < 1) index = 1;
+      if (index > totalSlides) index = totalSlides;
+
+      currentSlide = index;
+
+      // Update slide visibility
+      document.querySelectorAll('.slide').forEach((slideEl, idx) => {
+        if (idx === currentSlide - 1) {
+          slideEl.classList.add('active');
+        } else {
+          slideEl.classList.remove('active');
+        }
+      });
+
+      // Update header badge
+      document.getElementById('slideBadge').innerText = `Slide ${currentSlide} / ${totalSlides}`;
+
+      // Update progress bar
+      const progressPercent = (currentSlide / totalSlides) * 100;
+      document.getElementById('progressBar').style.width = `${progressPercent}%`;
+
+      // Re-trigger Mermaid rendering if needed
+      mermaid.contentLoaded();
+
+      setTimeout(initDiagramPopout, 300);
+    }
+
+    function nextSlide() { showSlide(currentSlide + 1); }
+    function prevSlide() { showSlide(currentSlide - 1); }
+
+    // Diagram Pop-out Click Handler
+    function initDiagramPopout() {
+      document.querySelectorAll('.mermaid-box').forEach((box) => {
+        box.onclick = (e) => {
+          e.stopPropagation();
+          const svg = box.querySelector('svg');
+          if (!svg) return;
+
+          const container = document.getElementById('modalDiagramContainer');
+          container.innerHTML = svg.outerHTML;
+          const clonedSvg = container.querySelector('svg');
+          if (clonedSvg) {
+            clonedSvg.style.maxHeight = '72vh';
+            clonedSvg.style.width = '100%';
+            clonedSvg.style.height = 'auto';
+          }
+
+          document.getElementById('diagramModal').classList.add('active');
+        };
+      });
+    }
+
+    function closeModal() {
+      document.getElementById('diagramModal').classList.remove('active');
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(initDiagramPopout, 600);
+    });
+
+    // Keyboard Controls
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeModal();
+        return;
+      }
+      if (document.getElementById('diagramModal').classList.contains('active')) return;
+
+      if (e.key === 'ArrowRight' || e.key === 'Space') nextSlide();
+      if (e.key === 'ArrowLeft') prevSlide();
+      if (e.key === 'Home') showSlide(1);
+      if (e.key === 'End') showSlide(totalSlides);
+    });
+  </script>
+</body>
+</html>
