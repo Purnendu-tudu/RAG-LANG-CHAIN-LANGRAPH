@@ -7,7 +7,7 @@ import {
 mermaid.initialize({
   startOnLoad: false,
   suppressErrorRendering: true,
-  theme: 'dark',
+  theme: 'default',
   securityLevel: 'loose',
   fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   flowchart: {
@@ -26,7 +26,7 @@ mermaid.initialize({
   },
   themeCSS: `
     .node foreignObject { overflow: visible !important; }
-    .node foreignObject div { white-space: nowrap !important; padding: 4px 12px !important; display: inline-block !important; }
+    .node foreignObject div { white-space: nowrap !important; padding: 4px 12px !important; display: inline-block !important; color: #0f172a !important; }
     .label foreignObject { overflow: visible !important; }
     .cluster-label { overflow: visible !important; }
     .cluster-label span, .cluster-label div, .cluster-label text {
@@ -34,34 +34,43 @@ mermaid.initialize({
       padding: 4px 10px !important;
       font-weight: 700 !important;
       font-size: 13px !important;
-      color: #38bdf8 !important;
-      fill: #38bdf8 !important;
+      color: #00875a !important;
+      fill: #00875a !important;
     }
-    .node label { font-family: inherit; }
+    .node label { font-family: inherit; color: #0f172a !important; }
     svg { max-width: 100% !important; min-height: 120px !important; height: auto !important; overflow: visible !important; }
   `,
   themeVariables: {
-    darkMode: true,
-    background: '#0a101d',
+    darkMode: false,
+    background: '#ffffff',
     fontSize: '13px',
-    primaryColor: '#1e293b',
-    primaryTextColor: '#f8fafc',
-    primaryBorderColor: '#38bdf8',
-    lineColor: '#38bdf8',
-    secondaryColor: '#0f172a',
-    tertiaryColor: '#1e293b',
-    nodeBorder: '#38bdf8',
-    clusterBkg: '#0f172a',
-    clusterBorder: '#334155',
-    defaultLinkColor: '#38bdf8',
-    titleColor: '#f8fafc',
-    edgeLabelBackground: '#0f172a',
+    primaryColor: '#f8fafc',
+    primaryTextColor: '#0f172a',
+    primaryBorderColor: '#00875a',
+    lineColor: '#00875a',
+    secondaryColor: '#f1f5f9',
+    tertiaryColor: '#e2e8f0',
+    nodeBorder: '#00875a',
+    clusterBkg: '#f8fafc',
+    clusterBorder: '#cbd5e1',
+    defaultLinkColor: '#00875a',
+    titleColor: '#0f172a',
+    edgeLabelBackground: '#ffffff',
   },
 });
 
 function sanitizeMermaidChart(rawChart: string): string {
   if (!rawChart) return '';
   let clean = rawChart.trim();
+
+  // Convert dark classDef colors to clean GE VernovAI Light Theme colors
+  clean = clean
+    .replace(/fill:#334155,stroke:#64748b,color:#f8fafc/gi, 'fill:#e2e8f0,stroke:#64748b,color:#0f172a')
+    .replace(/fill:#1e3a8a,stroke:#3b82f6,color:#f8fafc/gi, 'fill:#dbeafe,stroke:#2563eb,color:#0f172a')
+    .replace(/fill:#7f1d1d,stroke:#ef4444,color:#f8fafc/gi, 'fill:#fee2e2,stroke:#dc2626,color:#0f172a')
+    .replace(/fill:#14532d,stroke:#22c55e,color:#f8fafc/gi, 'fill:#d1fae5,stroke:#059669,color:#0f172a')
+    .replace(/fill:#581c87,stroke:#a855f7,color:#f8fafc/gi, 'fill:#f3e8ff,stroke:#9333ea,color:#0f172a')
+    .replace(/fill:#7c2d12,stroke:#f97316,color:#f8fafc/gi, 'fill:#ffedd5,stroke:#ea580c,color:#0f172a');
 
   // If sequenceDiagram, sanitize HTML tags like <br/> inside participant names & quotes
   if (clean.includes('sequenceDiagram')) {
@@ -270,14 +279,14 @@ const MermaidDiagramComponent: React.FC<MermaidDiagramProps> = ({ chart }) => {
       <div
         ref={containerRef}
         onClick={() => setIsModalOpen(true)}
-        className="group relative my-3 p-4 glass-panel border border-slate-800/80 hover:border-indigo-500/50 rounded-2xl overflow-x-auto max-w-full min-w-0 min-h-[140px] flex-shrink-0 flex flex-col items-center bg-slate-950/80 shadow-lg cursor-pointer transition-all duration-200"
+        className="group relative my-3 p-4 border border-slate-200 hover:border-emerald-500/60 rounded-2xl overflow-x-auto max-w-full min-w-0 min-h-[140px] flex-shrink-0 flex flex-col items-center bg-white shadow-sm hover:shadow-md cursor-pointer transition-all duration-200"
         title="Click to pop-out, zoom & save diagram"
       >
         <div className="w-full max-w-full min-h-[120px] flex-shrink-0 overflow-x-auto flex justify-center py-2" dangerouslySetInnerHTML={{ __html: svgContent }} />
 
         {/* Top-Right Interactive Pop-Out Badge */}
-        <div className="absolute top-3 right-3 opacity-75 group-hover:opacity-100 transition-opacity">
-          <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-indigo-600/90 group-hover:bg-indigo-500 text-white text-xs font-medium shadow-md shadow-indigo-600/20 transition-all">
+        <div className="absolute top-3 right-3 opacity-80 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-emerald-600 group-hover:bg-emerald-500 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 transition-all">
             <Maximize2 className="w-3 h-3" />
             <span>Pop-out & Zoom</span>
           </div>
@@ -286,45 +295,45 @@ const MermaidDiagramComponent: React.FC<MermaidDiagramProps> = ({ chart }) => {
 
       {/* ── Pop-out Fullscreen Lightbox Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex flex-col justify-between animate-fadeIn">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex flex-col justify-between animate-fadeIn">
 
           {/* Modal Header Controls Toolbar */}
-          <div className="bg-slate-900/90 border-b border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-md z-10">
+          <div className="bg-white border-b border-slate-200 px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-sm z-10">
 
             <div className="flex items-center space-x-2">
-              <Sparkles className="w-4 h-4 text-indigo-400" />
-              <span className="text-sm font-semibold text-slate-100">Interactive Diagram Viewer</span>
+              <Sparkles className="w-4 h-4 text-emerald-600" />
+              <span className="text-sm font-bold text-slate-900">Interactive Diagram Viewer</span>
             </div>
 
             {/* Controls */}
             <div className="flex items-center flex-wrap gap-2">
 
               {/* Zoom controls */}
-              <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl p-1 text-xs">
+              <div className="flex items-center bg-slate-100 border border-slate-200 rounded-xl p-1 text-xs">
                 <button
                   onClick={handleZoomOut}
-                  className="p-1.5 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg transition-all"
+                  className="p-1.5 hover:bg-slate-200 text-slate-700 hover:text-slate-900 rounded-lg transition-all"
                   title="Zoom Out (-)"
                 >
                   <ZoomOut className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={handleResetZoom}
-                  className="px-2 py-1 hover:bg-slate-800 text-indigo-300 font-mono font-medium rounded-lg transition-all text-[11px]"
+                  className="px-2 py-1 hover:bg-slate-200 text-emerald-700 font-mono font-bold rounded-lg transition-all text-[11px]"
                   title="Reset Zoom (100%)"
                 >
                   {Math.round(zoom * 100)}%
                 </button>
                 <button
                   onClick={handleZoomIn}
-                  className="p-1.5 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg transition-all"
+                  className="p-1.5 hover:bg-slate-200 text-slate-700 hover:text-slate-900 rounded-lg transition-all"
                   title="Zoom In (+)"
                 >
                   <ZoomIn className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={handleResetZoom}
-                  className="p-1.5 hover:bg-slate-800 text-slate-400 hover:text-slate-200 rounded-lg transition-all"
+                  className="p-1.5 hover:bg-slate-200 text-slate-600 hover:text-slate-900 rounded-lg transition-all"
                   title="Reset Pan & Zoom"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
@@ -335,19 +344,19 @@ const MermaidDiagramComponent: React.FC<MermaidDiagramProps> = ({ chart }) => {
               <div className="flex items-center space-x-1.5">
                 <button
                   onClick={handleDownloadSVG}
-                  className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 hover:text-indigo-200 text-xs font-semibold transition-all"
+                  className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-semibold transition-all"
                   title="Save as SVG Vector File"
                 >
-                  <Download className="w-3.5 h-3.5" />
+                  <Download className="w-3.5 h-3.5 text-emerald-600" />
                   <span>SVG</span>
                 </button>
 
                 <button
                   onClick={handleDownloadPNG}
-                  className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-cyan-300 hover:text-cyan-200 text-xs font-semibold transition-all"
+                  className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-300 text-teal-800 text-xs font-semibold transition-all"
                   title="Save as Image File (PNG)"
                 >
-                  <Image className="w-3.5 h-3.5" />
+                  <Image className="w-3.5 h-3.5 text-teal-600" />
                   <span>PNG</span>
                 </button>
               </div>
@@ -355,7 +364,7 @@ const MermaidDiagramComponent: React.FC<MermaidDiagramProps> = ({ chart }) => {
               {/* Close button */}
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-all ml-2"
+                className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 transition-all ml-2"
                 title="Close (Esc)"
               >
                 <X className="w-4 h-4" />
@@ -371,7 +380,7 @@ const MermaidDiagramComponent: React.FC<MermaidDiagramProps> = ({ chart }) => {
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
-            className={`flex-1 overflow-hidden flex items-center justify-center p-6 select-none ${
+            className={`flex-1 overflow-hidden flex items-center justify-center p-6 bg-white select-none ${
               isDragging ? 'cursor-grabbing' : 'cursor-grab'
             }`}
           >
@@ -387,9 +396,9 @@ const MermaidDiagramComponent: React.FC<MermaidDiagramProps> = ({ chart }) => {
           </div>
 
           {/* Modal Footer Instructions */}
-          <div className="bg-slate-900/60 border-t border-slate-800/80 px-4 py-2 text-center">
-            <span className="text-[11px] text-slate-400">
-              💡 <b>Tip:</b> Click & drag to pan · Scroll mouse wheel to zoom in/out · Press <kbd className="px-1 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">Esc</kbd> to exit
+          <div className="bg-slate-50 border-t border-slate-200 px-4 py-2 text-center">
+            <span className="text-[11px] text-slate-600">
+              💡 <b>Tip:</b> Click & drag to pan · Scroll mouse wheel to zoom in/out · Press <kbd className="px-1.5 py-0.5 rounded bg-slate-200 text-slate-800 border border-slate-300 text-[10px]">Esc</kbd> to exit
             </span>
           </div>
         </div>
