@@ -1,0 +1,85 @@
+{
+  "metadata": {
+    "id": "c698c653-e041-4873-be61-ed5ebf5d956c",
+    "title": "Summarize installation safety precaution...",
+    "created_at": "2026-08-05T04:33:07.858814",
+    "updated_at": "2026-08-05T04:33:07.858814",
+    "message_count": 2
+  },
+  "messages": [
+    {
+      "id": "msg-user-1-1785904387",
+      "sender": "user",
+      "text": "Summarize installation safety precautions and siting guidelines",
+      "timestamp": "10:03 AM"
+    },
+    {
+      "id": "msg-assistant-2-1785904387",
+      "sender": "assistant",
+      "text": "No relevant information was found. Try rephrasing or correcting your query to get better results.",
+      "sources": [
+        {
+          "id": 1,
+          "content": "# Page 5\n5\n2) Connect between system output terminal and external circuit should be fixed, or use socket for system output terminal.\n3) Do not use two-way plug adapter for the connection of system’s output terminal with external circuit.\n4) Apart from the installation of the permanent circuit, any cables or wires that might be damaged due to outdoor exposure shoul d be sheathed with\nconduit for protection.  \n4. Safety Precautions:\nOperating personnel must full understand the safety precaution. Safety relies on our joined effort.\n1) All operations must:\na. Follow instruction in this manual.\nb. Operated by specialize workers.\nc. Wrong operation might result in accident and injury to workers and equipments.\n2) Operating personnel must master:\na. Equipment recognition\nb. Correct equipment operation ability\nc. Relevant safety knowledge  \nIn this manual:  \nWARNING: Indicates risk of severe injury or death or possible severe damage to equipment - proceed\nwith caution and follow instructions.  \nTIP: Indicates instruction or advice that may simplify or ease task or operation.  \nIMPORTANT: Indicates instruction or advice that is critical for correct assembly or operation. Damage to\nequipment may result if not heeded.",
+          "metadata": {
+            "chunk_id": "small_wind_turbine.pdf_p5_c6",
+            "document_name": "small_wind_turbine.pdf",
+            "section_heading": "Page 5",
+            "subsection": "Overview",
+            "chunk_type": "text",
+            "page_number": 5
+          }
+        },
+        {
+          "id": 2,
+          "content": "# Page 6\n6\nContent\nSafety Instructions ..................................................................................................................................................................................................... 4\nWarranty ..................................................................................................................................................................................................................... 7\nExploded View & Parts List ...................................................................................................................................................................................... 9\n1. Technical Specifications ..................................................................................................................................................................................... 11\n2. Wind Turbine Assembly ..................................................................................................................................................................................... 12\n2.1 Mounting Blades on The Hub ..................................................................................................................................................................... 12\n2.2 Connecting lead wires to Wind Generator ................................................................................................................................................ 13",
+          "metadata": {
+            "chunk_id": "small_wind_turbine.pdf_p6_c7",
+            "document_name": "small_wind_turbine.pdf",
+            "section_heading": "Page 6",
+            "subsection": "Overview",
+            "chunk_type": "text",
+            "page_number": 6
+          }
+        },
+        {
+          "id": 3,
+          "content": "# Page 4\n4\nSafety Instructions\nPLEASE READ THESE INSTRUCTIONS CAREFULLY BEFORE ASSEMBLING, INSTALLATING OR OPERATING OF YOUR HY WIND TURBINE.\n1. Before installation of this small wind turbine, you must know:\n1) Do not install wind turbine on a windy day or dusty day with wind speed more than 8m/s.\n2) Wearing wet gloves or clothes are forbidden.\n3) Installing or maintaining wind turbine must be under professionals’ guidance or contacting distributors.\n4) Please Using cables as the standard mentioned in this user manual section 4 (wire size selection), cables too thin or with poor quality may lead to\nleakage or fires and line losses.\n5) Non-professionals do not open the controller and inverter enclosure, any warranty claim will not be accepted if controller or inverter opened\nunauthorized.\n6) Grounding device installation must be in accordance with application standard and installation instruction.\n7) Battery wiring may splash spark, please makes sure without any inflammables near the work environment.\n8) Please do not place the controller, inverter and battery at damp, rain, vibration, corrosion and strong electromagnetic interference environment, the\nplaces in direct sunlight, near heater or other heat sources are not allowed either.  \n2. Selection and installation requirements of controller and inverter:\n1) Controller specification should be accordance with voltage, power, current of battery, solar panel battery set, and wind turbine and laden.",
+          "metadata": {
+            "chunk_id": "small_wind_turbine.pdf_p4_c4",
+            "document_name": "small_wind_turbine.pdf",
+            "section_heading": "Page 4",
+            "subsection": "Overview",
+            "chunk_type": "text",
+            "page_number": 4
+          }
+        },
+        {
+          "id": 4,
+          "content": "1) Controller specification should be accordance with voltage, power, current of battery, solar panel battery set, and wind turbine and laden.\n2) It is appropriated to install controller and battery in the same distribution box, and place it at a drafty room out of people reaching. Take some\nmethods to prevent children from entering or stretching out hands into box.\n3) Controller and battery installation should be accordance with relevant electrical equipment installation specification and comply with the operation\nspecification constituted by manufacturer.\n4) It is appropriated to use sealed lead acid battery for distribution box at inhabited room.  \n3. Wiring requirements:\n1) The hardwired connect between components in system should be fixed and reliable.  Do not use plugs or sockets.",
+          "metadata": {
+            "chunk_id": "small_wind_turbine.pdf_p4_c5",
+            "document_name": "small_wind_turbine.pdf",
+            "section_heading": "Page 4",
+            "subsection": "Overview",
+            "chunk_type": "text",
+            "page_number": 4
+          }
+        },
+        {
+          "id": 5,
+          "content": "Turbine users are liable to conduct these extra testing and provide referable test result.\n4. Installation pictures (see details on the installation location and its surrounding).\n5. Damaged machine pictures or videos.\n6. Ramsond technician will provide final solution according to defect description and the test result of troubleshooting.",
+          "metadata": {
+            "chunk_id": "small_wind_turbine.pdf_p7_c11",
+            "document_name": "small_wind_turbine.pdf",
+            "section_heading": "Page 7",
+            "subsection": "Overview",
+            "chunk_type": "text",
+            "page_number": 7
+          }
+        }
+      ],
+      "timestamp": "10:03 AM"
+    }
+  ]
+}

@@ -68,3 +68,10 @@ npm run dev
 - `POST /api/chat` - RAG Query execution endpoint
   - **Body**: `{ "question": "What is LangGraph?", "provider": "google" }`
   - **Response**: `{ "question": "...", "answer": "...", "sources": [...], "provider": "google" }`
+
+
+
+
+
+
+Show a pie chart breakdown of ticket Status : Customer Support tickets dataset
