@@ -2,6 +2,7 @@ import os
 import re
 import json
 import time
+import uuid
 import logging
 import warnings
 import tempfile
@@ -70,6 +71,7 @@ class ChatRequest(BaseModel):
     provider: Optional[str] = Field("google", example="google")
     temperature: Optional[float] = Field(0.2, ge=0.0, le=1.0, example=0.2)
     query_mode: Optional[str] = Field("qa", example="qa")
+    conversation_id: Optional[str] = Field(None, example="108623dd-2354-4d0a-bf6e-88249da4f54a")
 
 
 class SourceDocument(BaseModel):
@@ -83,6 +85,25 @@ class ChatResponse(BaseModel):
     answer: str
     sources: List[SourceDocument]
     provider: str
+    conversation_id: Optional[str] = None
+
+
+class ConversationMetadata(BaseModel):
+    id: str
+    title: str
+    created_at: str
+    updated_at: str
+    message_count: int
+    summary: Optional[str] = None
+
+
+class Conversation(BaseModel):
+    metadata: ConversationMetadata
+    messages: List[dict]
+
+
+class RenameConversationRequest(BaseModel):
+    title: str = Field(..., example="New Chat Title")
 
 
 class IndexRequest(BaseModel):
@@ -118,10 +139,12 @@ class IndexedDocumentsResponse(BaseModel):
 _BASE_DIR = os.path.dirname(__file__)
 _FAISS_DIR = os.path.join(_BASE_DIR, "faiss_index_store")
 _UPLOADS_DIR = os.path.join(_BASE_DIR, "uploads")
+_CONV_DIR = os.path.join(_BASE_DIR, "conversations_store")
 _REGISTRY_FILE = os.path.join(_FAISS_DIR, "document_registry.json")
 
 os.makedirs(_FAISS_DIR, exist_ok=True)
 os.makedirs(_UPLOADS_DIR, exist_ok=True)
+os.makedirs(_CONV_DIR, exist_ok=True)
 
 MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024   # 100 MB
 ALLOWED_EXTENSIONS = {".pdf"}
@@ -658,10 +681,13 @@ def gevernovai_chat_endpoint(request: ChatRequest):
         raw_answer = result.get("generation", "")
         answer_str = extract_text_from_llm_response(raw_answer)
 
+        # Save conversation turn to persistent JSON store
+        saved_conv_id = _save_conv_turn(request.conversation_id, request.question, answer_str.strip(), sources)
+
         elapsed_ms = int((time.time() - t0) * 1000)
         rag_logger.info(
-            "GEV CHAT | provider=%s | mode=%s | temp=%.1f | chunks=%d | elapsed=%dms | query=%.80s",
-            provider, mode, temp, len(retrieved_docs), elapsed_ms, request.question,
+            "GEV CHAT | provider=%s | conv_id=%s | temp=%.1f | chunks=%d | elapsed=%dms | query=%.80s",
+            provider, saved_conv_id, temp, len(retrieved_docs), elapsed_ms, request.question,
         )
 
         return ChatResponse(
@@ -669,6 +695,7 @@ def gevernovai_chat_endpoint(request: ChatRequest):
             answer=answer_str.strip(),
             sources=sources,
             provider=provider,
+            conversation_id=saved_conv_id,
         )
 
     except HTTPException:
@@ -678,6 +705,168 @@ def gevernovai_chat_endpoint(request: ChatRequest):
     except Exception as e:
         app_logger.error("GEV chat error: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=f"The AI model encountered an error. ({_safe_error(e)})")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Multi-Conversation File Persistence Helpers & Endpoints
+# ─────────────────────────────────────────────────────────────────────────────
+def _get_conv_path(conv_id: str) -> str:
+    safe_id = re.sub(r'[^a-zA-Z0-9_-]', '', conv_id)
+    return os.path.join(_CONV_DIR, f"{safe_id}.json")
+
+
+def _save_conv_turn(conv_id: Optional[str], question: str, answer: str, sources: List[SourceDocument]) -> str:
+    if not conv_id or not conv_id.strip():
+        conv_id = str(uuid.uuid4())
+
+    path = _get_conv_path(conv_id)
+    now_iso = datetime.utcnow().isoformat()
+    now_time = datetime.now().strftime("%I:%M %p")
+
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception:
+            data = None
+    else:
+        data = None
+
+    if not data:
+        title = question.strip()[:40] + ("..." if len(question.strip()) > 40 else "")
+        data = {
+            "metadata": {
+                "id": conv_id,
+                "title": title or "New Conversation",
+                "created_at": now_iso,
+                "updated_at": now_iso,
+                "message_count": 0,
+            },
+            "messages": []
+        }
+
+    sources_dict = [{"id": s.id, "content": s.content, "metadata": s.metadata} for s in sources]
+
+    user_msg = {
+        "id": f"msg-user-{len(data['messages'])+1}-{int(time.time())}",
+        "sender": "user",
+        "text": question,
+        "timestamp": now_time,
+    }
+    bot_msg = {
+        "id": f"msg-assistant-{len(data['messages'])+2}-{int(time.time())}",
+        "sender": "assistant",
+        "text": answer,
+        "sources": sources_dict,
+        "timestamp": now_time,
+    }
+
+    data["messages"].extend([user_msg, bot_msg])
+    data["metadata"]["updated_at"] = now_iso
+    data["metadata"]["message_count"] = len(data["messages"])
+
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+    return conv_id
+
+
+@app.get("/api/conversations", response_model=List[ConversationMetadata], tags=["Conversation Management"])
+def list_conversations_endpoint():
+    """Returns a list of all saved conversations sorted by updated_at descending."""
+    convs = []
+    if not os.path.exists(_CONV_DIR):
+        return []
+
+    for filename in os.listdir(_CONV_DIR):
+        if filename.endswith(".json"):
+            filepath = os.path.join(_CONV_DIR, filename)
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    meta = data.get("metadata", {})
+                    if meta.get("id"):
+                        convs.append(ConversationMetadata(**meta))
+            except Exception as e:
+                app_logger.warning("Error reading conversation file %s: %s", filename, e)
+
+    return sorted(convs, key=lambda c: c.updated_at, reverse=True)
+
+
+@app.get("/api/conversations/{conv_id}", response_model=Conversation, tags=["Conversation Management"])
+def get_conversation_endpoint(conv_id: str):
+    """Retrieves full conversation metadata and message history for a specific session."""
+    path = _get_conv_path(conv_id)
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Conversation session not found.")
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return Conversation(**data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read conversation: {str(e)}")
+
+
+@app.post("/api/conversations/new", response_model=ConversationMetadata, tags=["Conversation Management"])
+def create_new_conversation_endpoint():
+    """Creates a new empty conversation session."""
+    conv_id = str(uuid.uuid4())
+    now_iso = datetime.utcnow().isoformat()
+    meta = ConversationMetadata(
+        id=conv_id,
+        title="New Conversation",
+        created_at=now_iso,
+        updated_at=now_iso,
+        message_count=0,
+    )
+    data = {
+        "metadata": meta.dict(),
+        "messages": []
+    }
+    path = _get_conv_path(conv_id)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+    return meta
+
+
+@app.put("/api/conversations/{conv_id}/rename", response_model=ConversationMetadata, tags=["Conversation Management"])
+def rename_conversation_endpoint(conv_id: str, request: RenameConversationRequest):
+    """Renames a conversation title."""
+    path = _get_conv_path(conv_id)
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Conversation session not found.")
+
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    data["metadata"]["title"] = request.title.strip() or "Untitled Chat"
+    data["metadata"]["updated_at"] = datetime.utcnow().isoformat()
+
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+    return ConversationMetadata(**data["metadata"])
+
+
+@app.delete("/api/conversations/{conv_id}", tags=["Conversation Management"])
+def delete_conversation_endpoint(conv_id: str):
+    """Deletes a conversation session."""
+    path = _get_conv_path(conv_id)
+    if os.path.exists(path):
+        os.remove(path)
+    return {"status": "success", "message": "Conversation deleted."}
+
+
+@app.post("/api/conversations/clear", tags=["Conversation Management"])
+def clear_all_conversations_endpoint():
+    """Deletes all conversation sessions."""
+    if os.path.exists(_CONV_DIR):
+        for f in os.listdir(_CONV_DIR):
+            if f.endswith(".json"):
+                os.remove(os.path.join(_CONV_DIR, f))
+    return {"status": "success", "message": "All conversations cleared."}
 
 
 # ─────────────────────────────────────────────────────────────────────────────

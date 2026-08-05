@@ -1,0 +1,111 @@
+{
+  "metadata": {
+    "id": "c0cf0832-7c79-445c-9a4f-7a9c306469be",
+    "title": "How can you help me ?",
+    "created_at": "2026-08-05T03:44:20.432847",
+    "updated_at": "2026-08-05T03:44:47.038688",
+    "message_count": 4
+  },
+  "messages": [
+    {
+      "id": "msg-user-1-1785901460",
+      "sender": "user",
+      "text": "How can you help me ?",
+      "timestamp": "09:14 AM"
+    },
+    {
+      "id": "msg-assistant-2-1785901460",
+      "sender": "assistant",
+      "text": "I can assist you with analyzing technical documentation, energy systems, electrification, and software architecture based on the provided context. \n\nIf you have specific questions regarding installation procedures, maintenance steps, or ticketing system data available in the reference materials, please let me know.",
+      "sources": [
+        {
+          "id": 1,
+          "content": "# Page 15\n15  \n⑦ Snap the cover to the back of generator        ⑧Tighten the cover by screws to 5N.m                     ⑨Assembled.  \n2.4 Mounting Turbines on The Pole  \n①Pass the cable through from the pole      ②Connect the turbine to the pole by bolts.            ③ Place flat washer, spring washer and nut,\ntighten the nut to 60N.m\n2.5 Hub/Blades and Generator Assembly",
+          "metadata": {
+            "chunk_id": "small_wind_turbine.pdf_p15_c19",
+            "document_name": "small_wind_turbine.pdf",
+            "section_heading": "Page 15",
+            "subsection": "Overview",
+            "chunk_type": "text",
+            "page_number": 15
+          }
+        },
+        {
+          "id": 2,
+          "content": "# Page 29\nTicket ID\nCustomer\nCategory\nIssue\nPriority\nStatus\nAssigned\nCreated\nResolution\nTKT-100783\nAva Brown\nNetwork\nInvoice missing\nMedium\nOpen\nPriya\n2026-07-10\nIssue resolved\nTKT-100784\nCharlotte Lewis\nAccount\nSlow performance\nMedium\nResolved\nPriya\n2026-04-07\nConfiguration updated\nTKT-100785\nWilliam Lewis\nApplication\nAccount locked\nLow\nPending\nNeha\n2025-10-14\nConfiguration updated\nTKT-100786\nEmma Lee\nHardware\nDatabase connection error\nLow\nClosed\nAmit\n2026-01-18\nWorkaround provided\nTKT-100787\nGrace Brown\nAPI\nPassword reset required\nHigh\nResolved\nPriya\n2026-05-03\nRestarted service\nTKT-100788\nBenjamin Martin\nNetwork\nApplication crash\nLow\nResolved\nNeha\n2026-02-26\nMonitoring\nTKT-100789\nDaniel Scott\nAPI\nAccount locked\nMedium\nIn Progress\nVikram\n2025-08-27\nPatch deployed\nTKT-100790\nCharlotte Hall\nPayment\nInvoice missing\nLow\nClosed\nPriya\n2026-03-29\nWorkaround provided\nTKT-100791\nAlice Smith\nLogin\nAccount locked\nCritical\nResolved\nKaran\n2025-08-17\nPatch deployed\nTKT-100792\nCharlotte Clark\nEmail\nUnable to login\nMedium\nPending\nKaran\n2025-10-18\nWorkaround provided\nTKT-100793\nAlice Brown\nDatabase\nUnexpected logout\nHigh\nOpen\nKaran\n2026-01-17\nRestarted service\nTKT-100794\nHenry Moore\nDatabase\nDatabase connection error\nHigh\nResolved\nRahul\n2026-04-12\nVendor investigation\nTKT-100795\nSophia Johnson\nLogin\nPermission denied\nLow\nOpen\nSneha\n2025-10-28\nPatch deployed\nTKT-100796\nJohn Lee\nNetwork\nPassword reset required\nCritical\nResolved\nRohan\n2026-06-26\nIssue resolved\nTKT-100797\nEmma Hall\nDatabase\nUnexpected logout\nCritical\nIn Progress\nAmit\n2025-08-23\nRestarted service\nTKT-100798\nSophia King",
+          "metadata": {
+            "chunk_id": "Synthetic_Customer_Support_Tickets_1000.pdf_p29_c57",
+            "document_name": "Synthetic_Customer_Support_Tickets_1000.pdf",
+            "section_heading": "Page 29",
+            "subsection": "Overview",
+            "chunk_type": "text",
+            "page_number": 29
+          }
+        },
+        {
+          "id": 3,
+          "content": "# Page 13\nTicket ID\nCustomer\nCategory\nIssue\nPriority\nStatus\nAssigned\nCreated\nResolution\nTKT-100335\nGrace Taylor\nAPI\nPermission denied\nMedium\nIn Progress\nRohan\n2025-08-17\nRestarted service\nTKT-100336\nDaniel Jackson\nAccount\nAPI authentication failure\nHigh\nPending\nRahul\n2025-09-10\nMonitoring\nTKT-100337\nSophia Clark\nApplication\nData synchronization failed\nHigh\nClosed\nVikram\n2026-02-24\nRestarted service\nTKT-100338\nEthan Walker\nNetwork\nEmail not received\nLow\nOpen\nMeera\n2026-06-26\nEscalated to L2\nTKT-100339\nAmelia Brown\nDatabase\nUnable to login\nLow\nOpen\nMeera\n2025-08-17\nPatch deployed\nTKT-100340\nAmelia Young\nSecurity\nNetwork timeout\nHigh\nResolved\nNeha\n2026-07-18\nPatch deployed\nTKT-100341\nDaniel Lee\nAPI\nFile upload failed\nLow\nResolved\nRahul\n2026-06-20\nPatch deployed\nTKT-100342\nCharlotte Moore\nAccount\nSlow performance\nLow\nClosed\nNeha\n2025-08-04\nVendor investigation\nTKT-100343\nCharlotte Anderson\nSecurity\nApplication crash\nMedium\nIn Progress\nNeha\n2025-10-05\nPatch deployed\nTKT-100344\nLiam Johnson\nApplication\nEmail not received\nCritical\nOpen\nMeera\n2025-10-05\nIssue resolved\nTKT-100345\nLucas Hall\nDatabase\nInvoice missing\nHigh\nIn Progress\nRahul\n2026-04-13\nRestarted service\nTKT-100346\nAlice Martin\nPayment\nPermission denied\nCritical\nResolved\nMeera\n2026-01-20\nIssue resolved\nTKT-100347\nDavid Johnson\nNetwork\nEmail not received\nMedium\nOpen\nMeera\n2025-09-24\nRestarted service\nTKT-100348\nEthan Hall\nHardware\nDatabase connection error\nLow\nPending\nArjun\n2026-04-18\nIssue resolved\nTKT-100349\nLucas Thomas\nEmail\nUnable to login\nLow\nIn Progress\nRohan\n2025-08-26\nEscalated to L2\nTKT-100350\nWilliam Hall",
+          "metadata": {
+            "chunk_id": "Synthetic_Customer_Support_Tickets_1000.pdf_p13_c25",
+            "document_name": "Synthetic_Customer_Support_Tickets_1000.pdf",
+            "section_heading": "Page 13",
+            "subsection": "Overview",
+            "chunk_type": "text",
+            "page_number": 13
+          }
+        }
+      ],
+      "timestamp": "09:14 AM"
+    },
+    {
+      "id": "msg-user-3-1785901487",
+      "sender": "user",
+      "text": "hi",
+      "timestamp": "09:14 AM"
+    },
+    {
+      "id": "msg-assistant-4-1785901487",
+      "sender": "assistant",
+      "text": "Hello! How can I assist you with your technical documentation, energy systems, or electrification inquiries today?",
+      "sources": [
+        {
+          "id": 1,
+          "content": "# Page 29\nTicket ID\nCustomer\nCategory\nIssue\nPriority\nStatus\nAssigned\nCreated\nResolution\nTKT-100783\nAva Brown\nNetwork\nInvoice missing\nMedium\nOpen\nPriya\n2026-07-10\nIssue resolved\nTKT-100784\nCharlotte Lewis\nAccount\nSlow performance\nMedium\nResolved\nPriya\n2026-04-07\nConfiguration updated\nTKT-100785\nWilliam Lewis\nApplication\nAccount locked\nLow\nPending\nNeha\n2025-10-14\nConfiguration updated\nTKT-100786\nEmma Lee\nHardware\nDatabase connection error\nLow\nClosed\nAmit\n2026-01-18\nWorkaround provided\nTKT-100787\nGrace Brown\nAPI\nPassword reset required\nHigh\nResolved\nPriya\n2026-05-03\nRestarted service\nTKT-100788\nBenjamin Martin\nNetwork\nApplication crash\nLow\nResolved\nNeha\n2026-02-26\nMonitoring\nTKT-100789\nDaniel Scott\nAPI\nAccount locked\nMedium\nIn Progress\nVikram\n2025-08-27\nPatch deployed\nTKT-100790\nCharlotte Hall\nPayment\nInvoice missing\nLow\nClosed\nPriya\n2026-03-29\nWorkaround provided\nTKT-100791\nAlice Smith\nLogin\nAccount locked\nCritical\nResolved\nKaran\n2025-08-17\nPatch deployed\nTKT-100792\nCharlotte Clark\nEmail\nUnable to login\nMedium\nPending\nKaran\n2025-10-18\nWorkaround provided\nTKT-100793\nAlice Brown\nDatabase\nUnexpected logout\nHigh\nOpen\nKaran\n2026-01-17\nRestarted service\nTKT-100794\nHenry Moore\nDatabase\nDatabase connection error\nHigh\nResolved\nRahul\n2026-04-12\nVendor investigation\nTKT-100795\nSophia Johnson\nLogin\nPermission denied\nLow\nOpen\nSneha\n2025-10-28\nPatch deployed\nTKT-100796\nJohn Lee\nNetwork\nPassword reset required\nCritical\nResolved\nRohan\n2026-06-26\nIssue resolved\nTKT-100797\nEmma Hall\nDatabase\nUnexpected logout\nCritical\nIn Progress\nAmit\n2025-08-23\nRestarted service\nTKT-100798\nSophia King",
+          "metadata": {
+            "chunk_id": "Synthetic_Customer_Support_Tickets_1000.pdf_p29_c57",
+            "document_name": "Synthetic_Customer_Support_Tickets_1000.pdf",
+            "section_heading": "Page 29",
+            "subsection": "Overview",
+            "chunk_type": "text",
+            "page_number": 29
+          }
+        },
+        {
+          "id": 2,
+          "content": "# Page 25\nTicket ID\nCustomer\nCategory\nIssue\nPriority\nStatus\nAssigned\nCreated\nResolution\nTKT-100671\nCharlotte Lewis\nHardware\nAccount locked\nLow\nIn Progress\nPriya\n2026-03-31\nRestarted service\nTKT-100672\nBenjamin Moore\nPayment\nAPI authentication failure\nMedium\nOpen\nVikram\n2025-11-07\nPassword reset\nTKT-100673\nDavid King\nLogin\nPayment failed\nHigh\nResolved\nPriya\n2026-04-10\nMonitoring\nTKT-100674\nMichael Clark\nDatabase\nAccount locked\nHigh\nIn Progress\nKaran\n2025-12-05\nMonitoring\nTKT-100675\nMia Clark\nHardware\nAccount locked\nLow\nPending\nAmit\n2025-12-21\nAwaiting customer response\nTKT-100676\nLiam Clark\nAPI\nSlow performance\nCritical\nOpen\nRohan\n2026-04-21\nEscalated to L2\nTKT-100677\nLucas Brown\nLogin\nPermission denied\nCritical\nIn Progress\nMeera\n2026-02-28\nIssue resolved\nTKT-100678\nGrace King\nNetwork\nApplication crash\nLow\nClosed\nNeha\n2026-01-21\nRestarted service\nTKT-100679\nOlivia Moore\nLogin\nNetwork timeout\nLow\nPending\nNeha\n2026-06-05\nPassword reset\nTKT-100680\nGrace Brown\nPayment\nFile upload failed\nLow\nOpen\nNeha\n2026-01-04\nAwaiting customer response\nTKT-100681\nOlivia Lee\nNetwork\nFile upload failed\nHigh\nPending\nSneha\n2026-05-31\nWorkaround provided\nTKT-100682\nAlice King\nHardware\nAccount locked\nLow\nPending\nKaran\n2026-01-30\nIssue resolved\nTKT-100683\nCharlotte Thomas\nHardware\nFile upload failed\nCritical\nClosed\nRohan\n2026-02-27\nPassword reset\nTKT-100684\nEmma Scott\nDatabase\nUnexpected logout\nCritical\nClosed\nRohan\n2026-06-24\nMonitoring\nTKT-100685\nLiam Lee\nEmail\nData synchronization failed\nCritical\nResolved\nPriya\n2025-08-19\nConfiguration updated\nTKT-100686\nHenry Allen\nAPI\nUnexpected logout\nHigh\nOpen",
+          "metadata": {
+            "chunk_id": "Synthetic_Customer_Support_Tickets_1000.pdf_p25_c49",
+            "document_name": "Synthetic_Customer_Support_Tickets_1000.pdf",
+            "section_heading": "Page 25",
+            "subsection": "Overview",
+            "chunk_type": "text",
+            "page_number": 25
+          }
+        },
+        {
+          "id": 3,
+          "content": "Medium\nPending\nNeha\n2026-05-06\nAwaiting customer response\nTKT-100265\nAlice Thomas\nLogin\nUnable to login\nHigh\nOpen\nNeha\n2025-08-07\nIssue resolved\nTKT-100266\nBenjamin Lewis\nEmail\nNetwork timeout\nCritical\nClosed\nSneha\n2025-07-30\nVendor investigation\nTKT-100267\nAmelia Taylor\nLogin\nInvoice missing\nCritical\nResolved\nSneha\n2025-10-06\nEscalated to L2\nTKT-100268\nMia Brown\nAPI\nUnable to login\nLow\nPending\nRahul\n2026-02-08\nWorkaround provided\nTKT-100269\nWilliam Scott\nHardware\nAPI authentication failure\nHigh\nClosed\nVikram\n2025-09-19\nAwaiting customer response\nTKT-100270\nJohn Moore\nAPI\nPassword reset required\nMedium\nOpen\nRahul\n2026-02-07\nMonitoring\nTKT-100271\nAmelia Hall\nNetwork\nInvoice missing\nLow\nResolved\nArjun\n2026-06-17\nWorkaround provided\nTKT-100272\nAlice Lewis\nApplication\nAPI authentication failure\nMedium\nIn Progress\nRahul\n2026-06-06\nVendor investigation\nTKT-100273\nEmma Smith\nLogin\nApplication crash\nLow\nOpen\nSneha\n2025-08-28\nEscalated to L2\nTKT-100274\nCharlotte King\nApplication\nFile upload failed\nLow\nOpen\nSneha\n2025-11-17\nIssue resolved\nTKT-100275\nAmelia Smith\nDatabase\nInvoice missing\nMedium\nOpen\nSneha\n2026-07-20\nWorkaround provided\nTKT-100276\nAlice Martin\nEmail\nInvoice missing\nLow\nOpen\nPriya\n2025-10-01\nEscalated to L2\nTKT-100277\nDaniel Lee\nAccount\nInvoice missing\nMedium\nPending\nRahul\n2025-11-25\nMonitoring\nTKT-100278\nAmelia Jackson\nEmail\nData synchronization failed\nCritical\nResolved\nPriya\n2026-01-15\nPassword reset",
+          "metadata": {
+            "chunk_id": "Synthetic_Customer_Support_Tickets_1000.pdf_p10_c20",
+            "document_name": "Synthetic_Customer_Support_Tickets_1000.pdf",
+            "section_heading": "Page 10",
+            "subsection": "Overview",
+            "chunk_type": "text",
+            "page_number": 10
+          }
+        }
+      ],
+      "timestamp": "09:14 AM"
+    }
+  ]
+}

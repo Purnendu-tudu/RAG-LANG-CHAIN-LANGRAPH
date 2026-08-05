@@ -17,11 +17,26 @@ export interface ChatMessage {
   temperature?: number;
 }
 
+export interface ConversationMetadata {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  message_count: number;
+  summary?: string;
+}
+
+export interface Conversation {
+  metadata: ConversationMetadata;
+  messages: ChatMessage[];
+}
+
 export interface ChatApiResponse {
   question: string;
   answer: string;
   sources: SourceDocument[];
   provider: string;
+  conversation_id?: string;
 }
 
 export type LLMProvider = 'google' | 'ollama';

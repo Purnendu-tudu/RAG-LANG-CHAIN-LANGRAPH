@@ -8,12 +8,20 @@ import {
   FileText, ListChecks, Search, StopCircle, AlertTriangle, FolderOpen,
   FileWarning, ChevronDown, Brain,
 } from 'lucide-react';
-import { ChatMessage as ChatMessageType, SourceDocument, LLMProvider, ChatApiResponse, QueryMode, preprocessMarkdownText } from '../types';
+import { ChatMessage as ChatMessageType, SourceDocument, LLMProvider, ChatApiResponse, QueryMode, ConversationMetadata, preprocessMarkdownText } from '../types';
 import { SourceDrawer } from '../components/SourceDrawer';
 import { SupportWidget } from '../components/SupportWidget';
 import { MermaidDiagram } from '../components/MermaidDiagram';
+import { ConversationSidebar } from '../components/ConversationSidebar';
 
 const API_BASE = 'http://localhost:8000';
+
+const WELCOME_MESSAGE: ChatMessageType = {
+  id: 'gev-welcome-1',
+  sender: 'assistant',
+  text: "Welcome to **GE VernovAI**! How can I help you?",
+  timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+};
 
 interface IndexedDoc { filename: string; chunk_count: number; }
 
@@ -44,14 +52,9 @@ export const GeVernovAIPage: React.FC = () => {
   const [activeSources, setActiveSources] = useState<SourceDocument[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const [messages, setMessages] = useState<ChatMessageType[]>([
-    {
-      id: 'gev-welcome-1',
-      sender: 'assistant',
-      text: "Welcome to **GE VernovAI**! How can I help you?",
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    }
-  ]);
+  // ── Multi-Conversation State
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessageType[]>([WELCOME_MESSAGE]);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -60,6 +63,88 @@ export const GeVernovAIPage: React.FC = () => {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // ── Fetch Conversations List
+  const { data: conversations = [], refetch: fetchConversations } = useQuery<ConversationMetadata[]>({
+    queryKey: ['conversations'],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/conversations`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    refetchInterval: 10000,
+  });
+
+  // ── Handle Selecting a Conversation
+  const handleSelectConversation = useCallback(async (id: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/conversations/${id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setActiveId(id);
+        if (data.messages && data.messages.length > 0) {
+          setMessages(data.messages);
+        } else {
+          setMessages([WELCOME_MESSAGE]);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load conversation', e);
+    }
+  }, []);
+
+  // ── Handle Creating a New Conversation
+  const handleNewConversation = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/conversations/new`, { method: 'POST' });
+      if (res.ok) {
+        const meta = await res.json();
+        setActiveId(meta.id);
+        setMessages([WELCOME_MESSAGE]);
+        fetchConversations();
+      }
+    } catch (e) {
+      setActiveId(null);
+      setMessages([WELCOME_MESSAGE]);
+    }
+  }, [fetchConversations]);
+
+  // ── Handle Renaming a Conversation
+  const handleRenameConversation = async (id: string, newTitle: string) => {
+    try {
+      await fetch(`${API_BASE}/api/conversations/${id}/rename`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTitle }),
+      });
+      fetchConversations();
+    } catch (e) {
+      console.error('Failed to rename conversation', e);
+    }
+  };
+
+  // ── Handle Deleting a Conversation
+  const handleDeleteConversation = async (id: string) => {
+    try {
+      await fetch(`${API_BASE}/api/conversations/${id}`, { method: 'DELETE' });
+      if (activeId === id) {
+        handleNewConversation();
+      } else {
+        fetchConversations();
+      }
+    } catch (e) {
+      console.error('Failed to delete conversation', e);
+    }
+  };
+
+  const handleClearAllConversations = async () => {
+    try {
+      await fetch(`${API_BASE}/api/conversations/clear`, { method: 'POST' });
+      handleNewConversation();
+    } catch (e) {
+      console.error('Failed to clear conversations', e);
+    }
+  };
 
   // ── Backend health check
   const { data: healthData, isError: healthError } = useQuery<{ status: string }>({
@@ -98,11 +183,17 @@ export const GeVernovAIPage: React.FC = () => {
     },
   });
 
-  // ── Chat mutation
+  // ── Chat mutation with conversation memory
   const gevMutation = useMutation<ChatApiResponse, Error, string>({
     mutationFn: async (question: string) => {
       abortRef.current = false;
-      const payload = { question, provider, temperature, query_mode: queryMode };
+      const payload = {
+        question,
+        provider,
+        temperature,
+        query_mode: queryMode,
+        conversation_id: activeId,
+      };
 
       let res = await fetch(`${API_BASE}/api/gevernovai/chat`, {
         method: 'POST',
@@ -126,6 +217,9 @@ export const GeVernovAIPage: React.FC = () => {
     },
     onSuccess: (data) => {
       if (abortRef.current) return;
+      if (data.conversation_id && !activeId) {
+        setActiveId(data.conversation_id);
+      }
       const botMsg: ChatMessageType = {
         id: Date.now().toString(),
         sender: 'assistant',
@@ -137,6 +231,7 @@ export const GeVernovAIPage: React.FC = () => {
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, botMsg]);
+      fetchConversations();
     },
     onError: (err) => {
       if (abortRef.current) return;
@@ -187,7 +282,20 @@ export const GeVernovAIPage: React.FC = () => {
 
 
   return (
-    <div className="flex flex-col h-screen bg-white text-slate-900 selection:bg-emerald-500/20 selection:text-emerald-900">
+    <div className="flex h-screen bg-white text-slate-900 selection:bg-emerald-500/20 selection:text-emerald-900 overflow-hidden">
+      {/* ── Conversation Management Sidebar */}
+      <ConversationSidebar
+        conversations={conversations}
+        activeId={activeId}
+        onSelectConversation={handleSelectConversation}
+        onNewConversation={handleNewConversation}
+        onRenameConversation={handleRenameConversation}
+        onDeleteConversation={handleDeleteConversation}
+        onClearAll={handleClearAllConversations}
+      />
+
+      {/* ── Main Chat Area */}
+      <div className="flex-1 flex flex-col h-full min-w-0 bg-white relative">
 
       {/* ── Header */}
       <header className="bg-white/90 border-b border-slate-200 px-3 sm:px-4 py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 shadow-sm backdrop-blur-md z-10">
@@ -404,6 +512,7 @@ export const GeVernovAIPage: React.FC = () => {
             Answers are grounded strictly in indexed documents · GE VernovAI
           </p>
         </div>
+      </div>
       </div>
 
       <SourceDrawer isOpen={isDrawerOpen} sources={activeSources} onClose={() => setIsDrawerOpen(false)} />
