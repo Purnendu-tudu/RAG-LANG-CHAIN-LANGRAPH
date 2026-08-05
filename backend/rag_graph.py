@@ -12,6 +12,7 @@ from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.documents import Document
+from langchain_community.retrievers import BM25Retriever
 from langgraph.graph import StateGraph, START, END
 
 load_dotenv()
@@ -368,22 +369,98 @@ def _dedup_documents(docs: List[Document]) -> List[Document]:
     return unique
 
 
-def filter_relevant_documents(retriever, query: str, max_l2_distance: float = 1.3) -> List[Document]:
+def expand_query_keywords(query: str) -> str:
+    """Enriches short or generic queries with domain keywords to improve vector search recall."""
+    q_lower = query.lower().strip()
+    words = q_lower.split()
+    
+    # Generic query enrichment for common industry terms if query is brief
+    if "turbine" in q_lower and ("what" in q_lower or "explain" in q_lower or len(words) <= 5):
+        return f"{query} turbine design specifications components system operation generator rotor"
+    
+    return query
+
+
+def _hybrid_rrf_search(retriever, query: str, k: int = 6) -> List[tuple]:
     """
-    Performs similarity search with L2 distance score filtering, element-type prioritization, and deduplication.
-    Hybrid strategy: matches semantic similarity + prioritizes target element types (tables, lists, figures).
+    Performs Hybrid Search combining FAISS Dense Vector Similarity + BM25 Lexical Keyword Search
+    via Reciprocal Rank Fusion (RRF).
+    Returns list of (Document, score) tuples.
     """
-    raw_docs = []
+    docs_and_scores = []
     try:
         if hasattr(retriever, "vectorstore"):
-            docs_and_scores = retriever.vectorstore.similarity_search_with_score(query, k=6)
-            raw_docs = [doc for doc, score in docs_and_scores if score <= max_l2_distance]
+            docs_and_scores = retriever.vectorstore.similarity_search_with_score(query, k=k)
         else:
-            raw_docs = retriever.invoke(query)
+            docs = retriever.invoke(query)
+            docs_and_scores = [(d, 1.0) for d in docs]
+    except Exception as e:
+        logger.info("FAISS vector search error: %s", e)
+        return []
+
+    if not docs_and_scores:
+        return []
+
+    # Attempt BM25 Lexical Keyword Re-ranking over indexed document store
+    try:
+        all_docs = []
+        if hasattr(retriever, "vectorstore") and hasattr(retriever.vectorstore, "docstore"):
+            docstore_dict = getattr(retriever.vectorstore.docstore, "_dict", {})
+            all_docs = list(docstore_dict.values())
+
+        if len(all_docs) >= 2:
+            bm25_retriever = BM25Retriever.from_documents(all_docs, k=k)
+            bm25_docs = bm25_retriever.invoke(query)
+
+            # RRF Fusion: weight 0.6 for FAISS vector, 0.4 for BM25 keyword
+            rrf_scores = {}
+            doc_map = {}
+            score_map = {}
+
+            for rank, (doc, l2_score) in enumerate(docs_and_scores, start=1):
+                doc_id = doc.metadata.get("chunk_id") or hash(doc.page_content)
+                rrf_scores[doc_id] = rrf_scores.get(doc_id, 0.0) + (0.6 / (60 + rank))
+                doc_map[doc_id] = doc
+                score_map[doc_id] = l2_score
+
+            for rank, doc in enumerate(bm25_docs, start=1):
+                doc_id = doc.metadata.get("chunk_id") or hash(doc.page_content)
+                rrf_scores[doc_id] = rrf_scores.get(doc_id, 0.0) + (0.4 / (60 + rank))
+                if doc_id not in doc_map:
+                    doc_map[doc_id] = doc
+                    score_map[doc_id] = 1.25
+
+            sorted_ids = sorted(rrf_scores.keys(), key=lambda did: rrf_scores[did], reverse=True)
+            return [(doc_map[did], score_map.get(did, 1.2)) for did in sorted_ids[:k]]
+    except Exception as err:
+        logger.info("BM25 hybrid search fallback notice: %s", err)
+
+    return docs_and_scores
+
+
+def filter_relevant_documents(retriever, query: str, max_l2_distance: float = 1.35) -> List[Document]:
+    """
+    Performs Hybrid Search (BM25 + FAISS RRF) with L2 distance score filtering,
+    soft fallback for broad queries, element-type prioritization, and deduplication.
+    """
+    expanded_query = expand_query_keywords(query)
+
+    try:
+        docs_and_scores = _hybrid_rrf_search(retriever, expanded_query, k=6)
+        raw_docs = [doc for doc, score in docs_and_scores if score <= max_l2_distance]
+
+        # Soft Fallback: If strict score threshold returned 0 chunks, retain top 3 nearest hybrid chunks
+        if not raw_docs and docs_and_scores:
+            logger.info(
+                "Strict L2 score threshold (<= %.2f) returned 0 chunks for query ('%.50s'). "
+                "Applying soft fallback to top %d nearest hybrid chunks.",
+                max_l2_distance, query, min(3, len(docs_and_scores))
+            )
+            raw_docs = [doc for doc, score in docs_and_scores[:3]]
     except Exception as e:
         logger.info("Score filtering fallback: %s", e)
         try:
-            raw_docs = retriever.invoke(query)
+            raw_docs = retriever.invoke(expanded_query)
         except Exception:
             raw_docs = []
 
