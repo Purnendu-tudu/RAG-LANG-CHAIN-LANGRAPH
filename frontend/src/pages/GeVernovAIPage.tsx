@@ -14,6 +14,9 @@ import { SupportWidget } from '../components/SupportWidget';
 import { MermaidDiagram } from '../components/MermaidDiagram';
 import { ConversationSidebar } from '../components/ConversationSidebar';
 
+import { KpiWidget } from '../components/KpiWidget';
+import { InteractiveChartWidget } from '../components/InteractiveChartWidget';
+
 const API_BASE = 'http://localhost:8000';
 
 const WELCOME_MESSAGE: ChatMessageType = {
@@ -33,6 +36,24 @@ const markdownComponents = {
 
     if (!inline && language === 'mermaid') {
       return <MermaidDiagram chart={content} />;
+    }
+
+    if (!inline && (language === 'kpi' || language === 'kpi-card')) {
+      try {
+        const parsed = JSON.parse(content);
+        return <KpiWidget data={parsed} />;
+      } catch (e) {
+        // Fallthrough if parsing fails
+      }
+    }
+
+    if (!inline && (language === 'chart' || language === 'rechart' || language === 'bargraph' || language === 'piechart')) {
+      try {
+        const parsed = JSON.parse(content);
+        return <InteractiveChartWidget payload={parsed} />;
+      } catch (e) {
+        // Fallthrough if parsing fails
+      }
     }
 
     return (
